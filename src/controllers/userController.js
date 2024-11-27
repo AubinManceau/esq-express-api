@@ -6,21 +6,20 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const Training = require('../models/Training');
 const TrainingUserStatus = require('../models/TrainingUserStatus');
-const { Op } = require('sequelize');
+const nodemailer = require('nodemailer');
 
 exports.signup = async (req, res, next) => {
     try {
-        const { email, password, roleName, categoryName } = req.body;
+        const { email, roleName, categoryName, firstName, lastName } = req.body;
 
-        if (!email || !password || !Array.isArray(roleName) || roleName.length === 0) {
+        if (!email || !Array.isArray(roleName) || roleName.length === 0 || !firstName || !lastName) {
             return res.status(400).json({ error: 'Email, mot de passe, et au moins un rôle sont requis.' });
         }
 
-        const hashedPassword = await bcrypt.hash(password, 10);
-
         const user = await User.create({
+            first_name: firstName,
+            last_name: lastName,
             email: email,
-            password: hashedPassword
         });
 
         for (let i = 0; i < roleName.length; i++) {
@@ -57,9 +56,77 @@ exports.signup = async (req, res, next) => {
             });
         }
 
-        res.status(201).json({ message: 'Utilisateur créé avec succès!', userId: user.id });
+        const token = jwt.sign(
+            { userId: user.id },
+            'RANDOM_TOKEN_SECRET_INSCRIPTION',
+            { expiresIn: '48h' }
+        );
+
+        const transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+                user: 'aubinmanceau0@gmail.com',
+                pass: 'uirw iizy imyx qsah'
+            }
+        });
+
+        const mailOptions = {
+            from: 'your-email@example.com',
+            to: email,
+            subject: 'Bienvenue à l\'ES Quelaines - Finalisez votre inscription',
+            html: `
+                <h1>Bienvenue ${firstName} ${lastName} !</h1>
+                <p>Nous sommes ravis de vous accueillir à l\'<strong>ESQ</strong>.</p>
+                <p>Pour finaliser votre inscription, veuillez suivre le lien ci-dessous. Ce lien est valide pendant <strong>48 heures</strong>.</p>
+                <a href="https://monprojet.com/inscription?token=${token}" style="color: #0066cc; text-decoration: none; font-weight: bold;">Complétez votre inscription</a>
+                <p>Vous pouvez également télécharger notre application :</p>
+                <ul>
+                    <li><a href="https://www.apple.com/app-store/" target="_blank">Télécharger depuis l’App Store</a></li>
+                    <li><a href="https://play.google.com/store" target="_blank">Télécharger depuis le Play Store</a></li>
+                </ul>
+                <p>Si vous avez des questions, n'hésitez pas à nous contacter à <a href="mailto:support@esq.com">support@esq.com</a>.</p>
+                <p>À très bientôt,<br>Le bureau de l'ESQ</p>
+            `
+        };
+
+        await transporter.sendMail(mailOptions);
+
+        res.status(201).json({ 
+            message: 'Utilisateur créé avec succès!', 
+            userId: user.id,
+            token: token
+        });
     } catch (error) {
         console.error('Erreur lors de la création de l\'utilisateur:', error);
+    }
+};
+
+exports.definePassword = async (req, res, next) => {
+    try {
+        const { token, password, confirmPassword  } = req.body;
+
+        if (!token || !password || !confirmPassword) {
+            return res.status(400).json({ error: 'Token et mot de passe sont requis.' });
+        }
+
+        if (password !== confirmPassword) {
+            return res.status(400).json({ error: 'Les mots de passe ne correspondent pas.' });
+        }
+
+        const decodedToken = jwt.verify(token, 'RANDOM_TOKEN_SECRET_INSCRIPTION');
+        if (!decodedToken) {
+            return res.status(400).json({ error: 'Le temps d\'inscription est dépasssé.' });
+        }
+
+        const user = await User.findByPk(decodedToken.userId);
+        const hashedPassword = await bcrypt.hash(password, 10);
+        user.password = hashedPassword;
+        user.isActive = true;
+        await user.save();
+
+        res.status(200).json({ message: 'Mot de passe défini avec succès!' });
+    } catch (error) {
+        console.error('Erreur lors de la définition du mot de passe:', error);
     }
 };
 
@@ -75,6 +142,10 @@ exports.login = async (req, res, next) => {
         const user = await User.findOne({ where: { email: email } });
         if (!user) {
             return res.status(401).json({ message: 'Paire identifiant / mot de passe incorrecte' });
+        }else{
+            if (!user.isActive) {
+                return res.status(401).json({ message: 'L\'utilisateur n\'a pas encore défini son mot de passe.' });
+            }
         }
 
         const isPasswordValid = await bcrypt.compare(password, user.password);
@@ -84,7 +155,7 @@ exports.login = async (req, res, next) => {
 
         const token = jwt.sign(
             { userId: user.id },
-            'RANDOM_TOKEN_SECRET',
+            'RANDOM_TOKEN_SECRET_CONNEXION',
             { expiresIn: '24h' }
         );
 

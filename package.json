@@ -14,6 +14,7 @@
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.7.0",
     "mongoose-unique-validator": "^5.0.1",
+    "nodemailer": "^6.9.16",
     "sequelize": "^6.37.5",
     "sqlite3": "^5.1.7",
     "swagger-autogen": "^2.23.7",
