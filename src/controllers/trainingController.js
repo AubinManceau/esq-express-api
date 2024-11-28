@@ -40,11 +40,11 @@ exports.createTraining = async (req, res, next) => {
 
 exports.updateTraining = async (req, res, next) => {
     try {
-        const { categoryId } = req.body;
+        const { categoryId, ...trainingData } = req.body;
+        const trainingId = req.params.id;
 
-        const [updated] = await Training.update(req.body, { where: { id: req.params.id } });
-
-        if (updated === 0) {
+        const training = await Training.findByPk(trainingId);
+        if (!training) {
             return res.status(404).json({ message: 'Entrainement non trouvé !' });
         }
 
@@ -53,10 +53,11 @@ exports.updateTraining = async (req, res, next) => {
                 where: { trainingId: req.params.id }
             });
 
+            const rolesId = [1, 2];
             const users = await UserRoleCategory.findAll({
                 where: {
                     categoryId: categoryId,
-                    roleId: { [Op.in]: [1, 2] }
+                    roleId: { [Op.in]: rolesId }
                 }
             });
 
@@ -68,7 +69,9 @@ exports.updateTraining = async (req, res, next) => {
             ));
         }
 
-        res.status(200).json({ message: 'Entrainement modifié et statuts d\'utilisateurs mis à jour !' });
+        await training.update({ ...trainingData, categoryId });
+
+        res.status(200).json({ message: 'Entrainement modifié' });
     } catch (error) {
         res.status(400).json({ error: error.message });
     }
@@ -76,10 +79,13 @@ exports.updateTraining = async (req, res, next) => {
 
 exports.deleteTraining = async (req, res, next) => {
     try {
-        const deleted = await Training.destroy({ where: { id: req.params.id } });
-        if (deleted === 0) {
+        const trainingId = req.params.id;
+        const training = await Training.findByPk(trainingId);
+        if (!training) {
             return res.status(404).json({ message: 'Entrainement non trouvé !' });
         }
+        await TrainingUserStatus.destroy({ where: { trainingId } });
+        await training.destroy();
         res.status(200).json({ message: 'Entrainement supprimé !' });
     } catch (error) {
         res.status(400).json({ error });
@@ -97,11 +103,27 @@ exports.getAllTrainings = async (req, res, next) => {
 
 exports.getOneTraining = async (req, res, next) => {
     try {
-        const training = await Training.findByPk(req.params.id);
+        const trainingId = req.params.id;
+        const training = await Training.findByPk(trainingId);
         if (!training) {
             return res.status(404).json({ message: 'Entrainement non trouvé !' });
         }
         res.status(200).json(training);
+    } catch (error) {
+        res.status(400).json({ error });
+    }
+};
+
+exports.getTrainingsByCategory = async (req, res, next) => {
+    try {
+        const categoryName = req.params.name;
+        const category = await Category.findOne({ where: { name: categoryName } });
+        if (!category) {
+            return res.status(404).json({ message: 'Catégorie non trouvée !' });
+        }
+        const categoryId = category.id;
+        const trainings = await Training.findAll({ where: { categoryId } });
+        res.status(200).json(trainings);
     } catch (error) {
         res.status(400).json({ error });
     }
