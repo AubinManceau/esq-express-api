@@ -4,7 +4,6 @@ const { Op } = require('sequelize');
 const UserRoleCategory = require('../models/UserRoleCategory');
 const TrainingUserStatus = require('../models/TrainingUserStatus');
 
-// Création d'un entraînement  
 exports.createTraining = async (req, res, next) => {
     try {
         const { categoryId, ...trainingData } = req.body;
@@ -39,38 +38,32 @@ exports.createTraining = async (req, res, next) => {
     }
 };
 
-// Mise à jour d'un entraînement
 exports.updateTraining = async (req, res, next) => {
     try {
         const { categoryId } = req.body;
 
-        // Mettez à jour l'entraînement
         const [updated] = await Training.update(req.body, { where: { id: req.params.id } });
 
         if (updated === 0) {
             return res.status(404).json({ message: 'Entrainement non trouvé !' });
         }
 
-        // Si categoryId a été modifié, supprimez les anciennes lignes de TrainingUserStatus et recréez-les
         if (categoryId) {
-            // Supprimer toutes les entrées existantes dans TrainingUserStatus pour cet entraînement
             await TrainingUserStatus.destroy({
                 where: { trainingId: req.params.id }
             });
 
-            // Récupérer les utilisateurs associés à la nouvelle catégorie
             const users = await UserRoleCategory.findAll({
                 where: {
                     categoryId: categoryId,
-                    roleId: { [Op.in]: [1, 2] } // Récupérer les utilisateurs avec les rôles spécifiques
+                    roleId: { [Op.in]: [1, 2] }
                 }
             });
 
-            // Recréer les entrées dans TrainingUserStatus pour les utilisateurs associés
             await Promise.all(users.map(user =>
                 TrainingUserStatus.create({
                     userId: user.userId,
-                    trainingId: req.params.id // Utilisez l'ID de l'entraînement mis à jour
+                    trainingId: req.params.id
                 })
             ));
         }
@@ -81,7 +74,6 @@ exports.updateTraining = async (req, res, next) => {
     }
 };
 
-// Suppression d'un entraînement
 exports.deleteTraining = async (req, res, next) => {
     try {
         const deleted = await Training.destroy({ where: { id: req.params.id } });
@@ -94,7 +86,6 @@ exports.deleteTraining = async (req, res, next) => {
     }
 };
 
-// Récupération de tous les entraînements
 exports.getAllTrainings = async (req, res, next) => {
     try {
         const trainings = await Training.findAll();
@@ -104,7 +95,6 @@ exports.getAllTrainings = async (req, res, next) => {
     }
 };
 
-// Récupération d'un entraînement par son id
 exports.getOneTraining = async (req, res, next) => {
     try {
         const training = await Training.findByPk(req.params.id);
