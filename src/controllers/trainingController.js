@@ -4,7 +4,6 @@ const { Op } = require('sequelize');
 const UserRoleCategory = require('../models/UserRoleCategory');
 const TrainingUserStatus = require('../models/TrainingUserStatus');
 
-// Création d'un entraînement  
 exports.createTraining = async (req, res, next) => {
     try {
         const { categoryId, ...trainingData } = req.body;
@@ -39,62 +38,60 @@ exports.createTraining = async (req, res, next) => {
     }
 };
 
-// Mise à jour d'un entraînement
 exports.updateTraining = async (req, res, next) => {
     try {
-        const { categoryId } = req.body;
+        const { categoryId, ...trainingData } = req.body;
+        const trainingId = req.params.id;
 
-        // Mettez à jour l'entraînement
-        const [updated] = await Training.update(req.body, { where: { id: req.params.id } });
-
-        if (updated === 0) {
+        const training = await Training.findByPk(trainingId);
+        if (!training) {
             return res.status(404).json({ message: 'Entrainement non trouvé !' });
         }
 
-        // Si categoryId a été modifié, supprimez les anciennes lignes de TrainingUserStatus et recréez-les
         if (categoryId) {
-            // Supprimer toutes les entrées existantes dans TrainingUserStatus pour cet entraînement
             await TrainingUserStatus.destroy({
                 where: { trainingId: req.params.id }
             });
 
-            // Récupérer les utilisateurs associés à la nouvelle catégorie
+            const rolesId = [1, 2];
             const users = await UserRoleCategory.findAll({
                 where: {
                     categoryId: categoryId,
-                    roleId: { [Op.in]: [1, 2] } // Récupérer les utilisateurs avec les rôles spécifiques
+                    roleId: { [Op.in]: rolesId }
                 }
             });
 
-            // Recréer les entrées dans TrainingUserStatus pour les utilisateurs associés
             await Promise.all(users.map(user =>
                 TrainingUserStatus.create({
                     userId: user.userId,
-                    trainingId: req.params.id // Utilisez l'ID de l'entraînement mis à jour
+                    trainingId: req.params.id
                 })
             ));
         }
 
-        res.status(200).json({ message: 'Entrainement modifié et statuts d\'utilisateurs mis à jour !' });
+        await training.update({ ...trainingData, categoryId });
+
+        res.status(200).json({ message: 'Entrainement modifié' });
     } catch (error) {
         res.status(400).json({ error: error.message });
     }
 };
 
-// Suppression d'un entraînement
 exports.deleteTraining = async (req, res, next) => {
     try {
-        const deleted = await Training.destroy({ where: { id: req.params.id } });
-        if (deleted === 0) {
+        const trainingId = req.params.id;
+        const training = await Training.findByPk(trainingId);
+        if (!training) {
             return res.status(404).json({ message: 'Entrainement non trouvé !' });
         }
+        await TrainingUserStatus.destroy({ where: { trainingId } });
+        await training.destroy();
         res.status(200).json({ message: 'Entrainement supprimé !' });
     } catch (error) {
         res.status(400).json({ error });
     }
 };
 
-// Récupération de tous les entraînements
 exports.getAllTrainings = async (req, res, next) => {
     try {
         const trainings = await Training.findAll();
@@ -104,14 +101,29 @@ exports.getAllTrainings = async (req, res, next) => {
     }
 };
 
-// Récupération d'un entraînement par son id
 exports.getOneTraining = async (req, res, next) => {
     try {
-        const training = await Training.findByPk(req.params.id);
+        const trainingId = req.params.id;
+        const training = await Training.findByPk(trainingId);
         if (!training) {
             return res.status(404).json({ message: 'Entrainement non trouvé !' });
         }
         res.status(200).json(training);
+    } catch (error) {
+        res.status(400).json({ error });
+    }
+};
+
+exports.getTrainingsByCategory = async (req, res, next) => {
+    try {
+        const categoryName = req.params.name;
+        const category = await Category.findOne({ where: { name: categoryName } });
+        if (!category) {
+            return res.status(404).json({ message: 'Catégorie non trouvée !' });
+        }
+        const categoryId = category.id;
+        const trainings = await Training.findAll({ where: { categoryId } });
+        res.status(200).json(trainings);
     } catch (error) {
         res.status(400).json({ error });
     }
