@@ -12,6 +12,7 @@ UserRoleCategory.belongsTo(User, { foreignKey: 'userId' });
 UserRoleCategory.belongsTo(Role, { foreignKey: 'roleId' });
 UserRoleCategory.belongsTo(Category, { foreignKey: 'categoryId', allowNull: true });
 Training.belongsTo(Category, { foreignKey: 'categoryId' });
+Training.hasMany(TrainingUserStatus, { foreignKey: 'trainingId' });
 TrainingUserStatus.belongsTo(User, { foreignKey: 'userId' });
 TrainingUserStatus.belongsTo(Training, { foreignKey: 'trainingId' });
 

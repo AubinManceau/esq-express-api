@@ -171,19 +171,16 @@ exports.login = async (req, res, next) => {
 
 exports.updateUser = async (req, res, next) => {
     try{
-        const { userId, email, firstName, lastName, roleName, categoryName } = req.body;
+        const userId = req.params.userId;
+        const {email, firstName, lastName, roleName, categoryName } = req.body;
 
-        if (!userId || !email || !firstName || !lastName) {
-            return res.status(400).json({ error: 'Identifiant, email, prénom et nom sont requis.' });
+        if (!email || !firstName || !lastName) {
+            return res.status(400).json({ error: 'Email, prénom et nom sont requis.' });
         }
 
         const user = await User.findByPk(userId);
-        if (!user) {
+        if (!user || !user.isActive) {
             return res.status(404).json({ error: 'Utilisateur non trouvé.' });
-        }
-
-        if (!user.isActive) {
-            return res.status(400).json({ error: 'L\'utilisateur n\'a pas encore défini son mot de passe.' });
         }
 
         if (roleName && roleName.length > 0) {
@@ -227,10 +224,11 @@ exports.updateUser = async (req, res, next) => {
 
 exports.updatePassword = async (req, res, next) => {
     try {
-        const { userId, oldPassword, newPassword, confirmPassword } = req.body;
+        const userId = req.params.userId;
+        const { oldPassword, newPassword, confirmPassword } = req.body;
 
-        if (!userId || !oldPassword || !newPassword || !confirmPassword) {
-            return res.status(400).json({ error: 'Identifiant, ancien mot de passe, nouveau mot de passe et confirmation sont requis.' });
+        if (!oldPassword || !newPassword || !confirmPassword) {
+            return res.status(400).json({ error: 'Ancien mot de passe, nouveau mot de passe et confirmation sont requis.' });
         }
 
         if (newPassword !== confirmPassword) {
@@ -238,12 +236,8 @@ exports.updatePassword = async (req, res, next) => {
         }
 
         const user = await User.findByPk(userId);
-        if (!user) {
+        if (!user || !user.isActive) {
             return res.status(404).json({ error: 'Utilisateur non trouvé.' });
-        }
-
-        if (!user.isActive) {
-            return res.status(400).json({ error: 'L\'utilisateur n\'a pas encore défini son mot de passe.' });
         }
 
         const isPasswordValid = await bcrypt.compare(oldPassword, user.password);
