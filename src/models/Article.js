@@ -12,7 +12,20 @@ const Article = sequelize.define('Article', {
   },
   image: {
     type: DataTypes.STRING,
+    allowNull: true,
   },
+  auther: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+  },
+  categories: {
+    type: DataTypes.TEXT,
+    allowNull: false,
+  },
+  date: {
+    type: DataTypes.DATE,
+    allowNull: false,
+  }
 });
 
 module.exports = Article;

@@ -4,6 +4,7 @@ require('./models');
 const userRoutes = require('./routes/user');
 const articleRoutes = require('./routes/article');
 const trainingRoutes = require('./routes/training');
+const authRoutes = require('./routes/auth');
 const seedRolesAndCategories = require('./seeders/seedRolesAndCategories');
 
 sequelize.sync()
@@ -20,8 +21,9 @@ app.use((req, res, next) => {
 });
 
 app.use(express.json());
-app.use('/api/auth', userRoutes);
-app.use('/api/article', articleRoutes);
-app.use('/api/training', trainingRoutes);
+app.use('/api/v1/users', userRoutes);
+app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/articles', articleRoutes);
+app.use('/api/v1/trainings', trainingRoutes);
 
 module.exports = app;

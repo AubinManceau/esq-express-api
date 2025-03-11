@@ -128,3 +128,45 @@ exports.getTrainingsByCategory = async (req, res, next) => {
         res.status(400).json({ error });
     }
 };
+
+exports.getTrainingsByUser = async (req, res, next) => {
+    try {
+        const userId = req.params.id;
+        const trainings = await Training.findAll({
+            include: [{
+                model: TrainingUserStatus,
+                where: { userId },
+                required: true
+            }]
+        });
+        res.status(200).json(trainings);
+    } catch (error) {
+        res.status(400).json({ error });
+    }
+}
+
+exports.getTrainingStats = async (req, res, next) => {
+    try {
+        const trainingId = req.params.id;
+
+        const presentCount = await TrainingUserStatus.count({
+            where: { trainingId, status: 'present' },
+        });
+
+        const absentCount = await TrainingUserStatus.count({
+            where: { trainingId, status: 'absent' },
+        });
+
+        const notRespondedCount = await TrainingUserStatus.count({
+            where: { trainingId, status: 'notResponded' },
+        });
+
+        res.status(200).json({
+            present: presentCount,
+            absent: absentCount,
+            notResponded: notRespondedCount,
+        });
+    } catch (error) {
+        res.status(400).json({ error });
+    }
+};

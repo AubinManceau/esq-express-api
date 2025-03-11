@@ -1,42 +1,95 @@
 const Article = require('../models/Article');
+const Category = require('../models/Category');
+const { Op } = require('sequelize');
 
-// Création d'un article
 exports.createArticle = async (req, res, next) => {
     try {
-        const article = await Article.create(req.body);
-        res.status(201).json({ message: 'Article créé !', article });
+        const {categories, title, content, image, date, auther} = req.body;
+
+        if (!title || !content || !date || !auther) {
+            return res.status(400).json({ message: 'Champs manquants !' });
+        }
+
+        const allCategories = await Category.findAll();
+        const categoriesNames = allCategories.map((category) => category.name);
+
+        let finalCategories = categories;
+        if (categories === 'all') {
+            finalCategories = [...new Set([ ...categoriesNames])];
+        } else {
+            finalCategories = [...new Set([ ...finalCategories])]
+        }
+
+        const article = new Article({
+            categories: finalCategories,
+            title,
+            content,
+            image,
+            date,
+            auther,
+        });
+
+        await article.save();
+
+        res.status(201).json({ message: 'Article créé !' });
     } catch (error) {
-        res.status(400).json({ error });
+        res.status(400).json({ message: 'Erreur' });
     }
 };
 
-// Mise à jour d'un article
 exports.updateArticle = async (req, res, next) => {
     try {
-        const [updated] = await Article.update(req.body, { where: { id: req.params.id } });
-        if (updated === 0) {
+        const id = req.params.id;
+        const {categories, title, content, image, date, auther} = req.body;
+
+        if (!title || !content || !date || !auther) {
+            return res.status(400).json({ message: 'Champs manquants !' });
+        }
+
+        const allCategories = await Category.findAll();
+        const categoriesNames = allCategories.map((category) => category.name);
+
+        let finalCategories = categories;
+        if (categories.includes('all')) {
+            finalCategories = [...new Set([ ...categoriesNames])];
+        } else {
+            finalCategories = [...new Set([ ...finalCategories])]
+        }
+
+        const article = await Article.findByPk(id);
+        if (!article) {
             return res.status(404).json({ message: 'Article non trouvé !' });
         }
+
+        article.categories = finalCategories;
+        article.title = title;
+        article.content = content;
+        article.image = image;
+        article.date = date;
+        article.auther = auther;
+
+        await article.save();
+
         res.status(200).json({ message: 'Article modifié !' });
     } catch (error) {
         res.status(400).json({ error });
     }
 };
 
-// Suppression d'un article
 exports.deleteArticle = async (req, res, next) => {
     try {
-        const deleted = await Article.destroy({ where: { id: req.params.id } });
-        if (deleted === 0) {
+        const id = req.params.id;
+        const article = await Article.findByPk(id);
+        if (!article) {
             return res.status(404).json({ message: 'Article non trouvé !' });
         }
+        await article.destroy();
         res.status(200).json({ message: 'Article supprimé !' });
     } catch (error) {
         res.status(400).json({ error });
     }
 };
 
-// Récupération de tous les articles
 exports.getAllArticles = async (req, res, next) => {
     try {
         const articles = await Article.findAll();
@@ -46,7 +99,6 @@ exports.getAllArticles = async (req, res, next) => {
     }
 };
 
-// Récupération d'un article par son id
 exports.getOneArticle = async (req, res, next) => {
     try {
         const article = await Article.findByPk(req.params.id);
@@ -54,6 +106,33 @@ exports.getOneArticle = async (req, res, next) => {
             return res.status(404).json({ message: 'Article non trouvé !' });
         }
         res.status(200).json(article);
+    } catch (error) {
+        res.status(400).json({ error });
+    }
+};
+
+exports.getArticlesByCategory = async (req, res, next) => {
+    try {
+        const category = req.params.category;
+        
+        const categoryExists = await Category.findOne({ where: { name: category } });
+        if (!categoryExists) {
+            return res.status(404).json({ message: 'Catégorie non trouvée !' });
+        }
+
+        const articles = await sequelize.query(
+            `SELECT * FROM Articles WHERE json_each.value = ?`,
+            {
+                replacements: [category],
+                type: QueryTypes.SELECT,
+            }
+        );
+
+        if (!articles) {
+            return res.status(404).json({ message: 'Aucun article trouvé pour cette catégorie !' });
+        }
+
+        res.status(200).json(articles);
     } catch (error) {
         res.status(400).json({ error });
     }
