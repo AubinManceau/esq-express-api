@@ -7,6 +7,7 @@ const jwt = require('jsonwebtoken');
 const Training = require('../models/Training');
 const TrainingUserStatus = require('../models/TrainingUserStatus');
 const nodemailer = require('nodemailer');
+require('dotenv').config();
 
 exports.signup = async (req, res, next) => {
     try {
@@ -58,7 +59,7 @@ exports.signup = async (req, res, next) => {
 
         const token = jwt.sign(
             { userId: user.id },
-            'RANDOM_TOKEN_SECRET_INSCRIPTION',
+            process.env.SECRET_KEY_SIGNUP,
             { expiresIn: '48h' }
         );
 
@@ -113,7 +114,7 @@ exports.definePassword = async (req, res, next) => {
             return res.status(400).json({ error: 'Les mots de passe ne correspondent pas.' });
         }
 
-        const decodedToken = jwt.verify(token, 'RANDOM_TOKEN_SECRET_INSCRIPTION');
+        const decodedToken = jwt.verify(token, process.env.SECRET_KEY_SIGNUP);
         if (!decodedToken) {
             return res.status(400).json({ error: 'Le temps d\'inscription est dépasssé.' });
         }
@@ -155,7 +156,7 @@ exports.login = async (req, res, next) => {
 
         const token = jwt.sign(
             { userId: user.id },
-            'RANDOM_TOKEN_SECRET_CONNEXION',
+            process.env.SECRET_KEY_LOGIN,
             { expiresIn: '24h' }
         );
 
