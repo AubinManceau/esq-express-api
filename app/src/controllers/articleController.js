@@ -1,5 +1,5 @@
-const Article = require('../models/Article');
-const Category = require('../models/Category');
+const Article = require('../models/Articles');
+const Category = require('../models/Categories');
 const { Op } = require('sequelize');
 
 exports.createArticle = async (req, res, next) => {

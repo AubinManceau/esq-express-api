@@ -1,9 +1,9 @@
-const User = require('../models/User');
-const Role = require('../models/Role');
-const Category = require('../models/Category');
-const UserRoleCategory = require('../models/UserRoleCategory');
+const User = require('../models/Users');
+const Role = require('../models/Roles');
+const Category = require('../models/Categories');
+const UserRoleCategory = require('../models/UserRolesCategories');
 const bcrypt = require('bcrypt');
-const TrainingUserStatus = require('../models/TrainingUserStatus');
+const TrainingUserStatus = require('../models/TrainingUsersStatus');
 require('dotenv').config();
 
 exports.updateUser = async (req, res, next) => {

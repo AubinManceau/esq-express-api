@@ -1,8 +1,8 @@
-const Training = require('../models/Training');
-const Category = require('../models/Category');
+const Training = require('../models/Trainings');
+const Category = require('../models/Categories');
 const { Op } = require('sequelize');
-const UserRoleCategory = require('../models/UserRoleCategory');
-const TrainingUserStatus = require('../models/TrainingUserStatus');
+const UserRoleCategory = require('../models/UserRolesCategories');
+const TrainingUserStatus = require('../models/TrainingUsersStatus');
 
 exports.createTraining = async (req, res, next) => {
     try {

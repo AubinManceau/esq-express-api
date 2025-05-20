@@ -1,11 +1,11 @@
-const User = require('../models/User');
-const Role = require('../models/Role');
-const Category = require('../models/Category');
-const UserRoleCategory = require('../models/UserRoleCategory');
+const User = require('../models/Users');
+const Role = require('../models/Roles');
+const Category = require('../models/Categories');
+const UserRoleCategory = require('../models/UserRolesCategories');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const Training = require('../models/Training');
-const TrainingUserStatus = require('../models/TrainingUserStatus');
+const Training = require('../models/Trainings');
+const TrainingUserStatus = require('../models/TrainingUsersStatus');
 const nodemailer = require('nodemailer');
 require('dotenv').config();
 
