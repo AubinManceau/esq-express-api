@@ -1,7 +1,7 @@
 const http = require('http');
 const app = require('./src/app.js');
-import swaggerjsdoc from "swagger-jsdoc";
-import swaggerUi from "swagger-ui-express";
+const swaggerjsdoc = require("swagger-jsdoc");
+const swaggerUi = require("swagger-ui-express");
 require('dotenv').config();
 
 const server = http.createServer(app);
