@@ -1,5 +1,10 @@
 const http = require('http');
 const app = require('./src/app.js');
+import swaggerjsdoc from "swagger-jsdoc";
+import swaggerUi from "swagger-ui-express";
+require('dotenv').config();
+
+const server = http.createServer(app);
 
 const normalizePort = val => {
   const port = parseInt(val, 10);
@@ -35,7 +40,38 @@ const errorHandler = error => {
   }
 };
 
-const server = http.createServer(app);
+const swaggerOptions = {
+  swaggerDefinition: {
+    openapi: "3.1.0",
+    info: {
+      title: "ESQ Manager API",
+      description: "ESQ Manager API Information",
+    },
+    servers: [
+      {
+        url: "http://localhost:" + port,
+      },
+    ],
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: "http",
+          scheme: "bearer",
+          bearerFormat: "JWT",
+        },
+      },
+    },
+    security: [
+      {
+        bearerAuth: [],
+      },
+    ],
+  },
+  apis: ["./src/routes/*.js"],
+};
+
+const swaggerDocs = swaggerjsdoc(swaggerOptions);
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
 server.on('error', errorHandler);
 server.on('listening', () => {
