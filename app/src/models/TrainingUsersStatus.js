@@ -11,9 +11,9 @@ module.exports = (sequelize) => {
             allowNull: false,
         },
         status: {
-            type: DataTypes.ENUM('notResponded', 'absent', 'present'),
+            type: DataTypes.ENUM('pending', 'absent', 'present'),
             allowNull: false,
-            defaultValue: 'notResponded'
+            defaultValue: 'pending'
         }
     }, {
     tableName: 'training_users_status',

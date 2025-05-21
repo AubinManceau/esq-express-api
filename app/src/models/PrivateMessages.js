@@ -1,28 +1,24 @@
 const { DataTypes } = require('sequelize');
 
 module.exports = (sequelize) => {
-  return sequelize.define('Articles', {
-    title: {
-      type: DataTypes.STRING,
-      allowNull: false,
-    },
+  return sequelize.define('PrivateMessages', {
     content: {
       type: DataTypes.TEXT,
       allowNull: false,
     },
-    image: {
-      type: DataTypes.STRING,
-      allowNull: true,
-    },
-    date: {
+    sentAt: {
       type: DataTypes.DATE,
       allowNull: false,
     },
-    userAuthorId: {
+    senderId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
+    receiverId: {
       type: DataTypes.INTEGER,
       allowNull: false,
     },
   }, {
-    tableName: 'articles',
+    tableName: 'private_messages',
   });
 };

@@ -1,0 +1,24 @@
+const { DataTypes } = require('sequelize');
+
+module.exports = (sequelize) => {
+    return sequelize.define('UsersConvocation', {
+        convocationId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+        },
+        userId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+        },
+        inviteFirstName: {
+            type: DataTypes.STRING(30),
+            allowNull: true,
+        },
+        inviteLastName: {
+            type: DataTypes.STRING(50),
+            allowNull: true,
+        },
+    }, {
+    tableName: 'users_convocation',
+  });
+};

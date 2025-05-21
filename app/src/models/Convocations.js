@@ -1,29 +1,28 @@
 const { DataTypes } = require('sequelize');
 
 module.exports = (sequelize) => {
-  return sequelize.define('Trainings', {
-    type: {
-      type: DataTypes.ENUM('match', 'training'),
-      allowNull: false,
-    },
-    date: {
+  return sequelize.define('Convocations', {
+    matchDate: {
       type: DataTypes.DATEONLY,
       allowNull: false,
     },
-    startTime: {
+    matchHour: {
       type: DataTypes.TIME,
       allowNull: false,
     },
-    status: {
-      type: DataTypes.ENUM('active', 'cancelled'),
+    convocationHour: {
+      type: DataTypes.TIME,
       allowNull: false,
-      defaultValue: 'active',
     },
-    categoryId: {
+    location: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    teamId: {
       type: DataTypes.INTEGER,
       allowNull: false,
     },
   }, {
-    tableName: 'trainings',
+    tableName: 'convocations',
   });
 };

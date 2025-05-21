@@ -11,7 +11,7 @@ require('dotenv').config();
 
 exports.signup = async (req, res) => {
     try {
-        const { email, rolesId, categoriesId, firstName, lastName } = req.body;
+        const { email, rolesId, categoriesId, firstName, lastName, phone } = req.body;
 
         if (!email || !Array.isArray(rolesId) || rolesId.length === 0 || !firstName || !lastName) {
             return res.status(400).json({ 
@@ -32,6 +32,7 @@ exports.signup = async (req, res) => {
             first_name: firstName,
             last_name: lastName,
             email: email,
+            phone: phone || null,
         });
 
         const roleAssociations = [];
