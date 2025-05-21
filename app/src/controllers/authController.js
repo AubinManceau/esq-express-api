@@ -1,60 +1,78 @@
-const User = require('../models/Users');
-const Role = require('../models/Roles');
-const Category = require('../models/Categories');
-const UserRoleCategory = require('../models/UserRolesCategories');
+const Users = require('../models/Users');
+const Roles = require('../models/Roles');
+const Categories = require('../models/Categories');
+const UserRolesCategories = require('../models/UserRolesCategories');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const Training = require('../models/Trainings');
-const TrainingUserStatus = require('../models/TrainingUsersStatus');
+const Trainings = require('../models/Trainings');
+const TrainingUsersStatus = require('../models/TrainingUsersStatus');
 const nodemailer = require('nodemailer');
 require('dotenv').config();
 
-exports.signup = async (req, res, next) => {
+exports.signup = async (req, res) => {
     try {
-        const { email, roleName, categoryName, firstName, lastName } = req.body;
+        const { email, rolesId, categoriesId, firstName, lastName } = req.body;
 
-        if (!email || !Array.isArray(roleName) || roleName.length === 0 || !firstName || !lastName) {
-            return res.status(400).json({ error: 'Email, mot de passe, et au moins un rôle sont requis.' });
+        if (!email || !Array.isArray(rolesId) || rolesId.length === 0 || !firstName || !lastName) {
+            return res.status(400).json({ 
+                status: 'error',
+                message: 'Nom, Prénom, Email et au moins un rôle sont requis.'
+            });
         }
 
-        const user = await User.create({
+        const existingUser = await Users.findOne({ where: { email } });
+        if (existingUser) {
+            return res.status(409).json({ 
+                status: 'error',
+                message: 'Un utilisateur avec cet email existe déjà.'
+            });
+        }
+
+        const user = await Users.create({
             first_name: firstName,
             last_name: lastName,
             email: email,
         });
 
-        for (let i = 0; i < roleName.length; i++) {
-            const role = roleName[i];
-            const category = categoryName[i] || null;
+        const roleAssociations = [];
+        for (let i = 0; i < rolesId.length; i++) {
+            const roleId = rolesId[i];
+            const categoryId = categoriesId && i < categoriesId.length ? categoriesId[i] : null;
         
-            const roleInstance = await Role.findOne({ where: { name: role } });
+            const roleInstance = await Roles.findOne({ where: { id: roleId } });
             if (!roleInstance) {
-                return res.status(400).json({ error: `Le rôle '${role}' n'existe pas.` });
+                return res.status(400).json({ 
+                    status: 'error',
+                    message: `Le rôle correspondant à l'id '${roleId}' n'existe pas.` 
+                });
             }
         
             let categoryInstance = null;
-            if (category) {
-                categoryInstance = await Category.findOne({ where: { name: category } });
+            if (categoryId) {
+                categoryInstance = await Categories.findOne({ where: { id: categoryId } });
                 if (!categoryInstance) {
-                    return res.status(400).json({ error: `La catégorie '${category}' n'existe pas.` });
+                    return res.status(400).json({ 
+                        status: 'error',
+                        message: `La catégorie correspondant à l'id '${categoryId}' n'existe pas.` 
+                    });
                 }
 
-                const trainings = await Training.findAll({
-                    where : {
-                        categoryId: categoryInstance.id
-                    }
+                const trainings = await Trainings.findAll({
+                    where: { categoryId: categoryInstance.id }
                 }); 
-                await Promise.all(trainings.map(training =>
-                    TrainingUserStatus.create({ userId: user.id, trainingId: training.id })
-                ));
                 
+                await Promise.all(trainings.map(training =>
+                    TrainingUsersStatus.create({ userId: user.id, trainingId: training.id })
+                ));
             }
         
-            await UserRoleCategory.create({
+            const association = await UserRolesCategories.create({
                 userId: user.id,
                 roleId: roleInstance.id,
                 categoryId: categoryInstance ? categoryInstance.id : null
             });
+            
+            roleAssociations.push(association);
         }
 
         const token = jwt.sign(
@@ -66,23 +84,23 @@ exports.signup = async (req, res, next) => {
         const transporter = nodemailer.createTransport({
             service: 'gmail',
             auth: {
-                user: 'aubinmanceau0@gmail.com',
-                pass: 'uirw iizy imyx qsah'
+                user: process.env.EMAIL_USER || 'aubinmanceau0@gmail.com',
+                pass: process.env.EMAIL_PASS || 'uirw iizy imyx qsah'
             }
         });
 
         const mailOptions = {
-            from: 'your-email@example.com',
+            from: process.env.EMAIL_FROM || 'contact@esq.com',
             to: email,
-            subject: 'Bienvenue à l\'ES Quelaines - Finalisez votre inscription',
+            subject: "Bienvenue à l'ES Quelaines - Finalisez votre inscription",
             html: `
                 <h1>Bienvenue ${firstName} ${lastName} !</h1>
-                <p>Nous sommes ravis de vous accueillir à l\'<strong>ESQ</strong>.</p>
+                <p>Nous sommes ravis de vous accueillir à l'<strong>ESQ</strong>.</p>
                 <p>Pour finaliser votre inscription, veuillez suivre le lien ci-dessous. Ce lien est valide pendant <strong>48 heures</strong>.</p>
-                <a href="https://monprojet.com/inscription?token=${token}" style="color: #0066cc; text-decoration: none; font-weight: bold;">Complétez votre inscription</a>
+                <a href="${process.env.FRONTEND_URL || 'https://monprojet.com'}/inscription?token=${token}" style="color: #0066cc; text-decoration: none; font-weight: bold;">Complétez votre inscription</a>
                 <p>Vous pouvez également télécharger notre application :</p>
                 <ul>
-                    <li><a href="https://www.apple.com/app-store/" target="_blank">Télécharger depuis l’App Store</a></li>
+                    <li><a href="https://www.apple.com/app-store/" target="_blank">Télécharger depuis l'App Store</a></li>
                     <li><a href="https://play.google.com/store" target="_blank">Télécharger depuis le Play Store</a></li>
                 </ul>
                 <p>Si vous avez des questions, n'hésitez pas à nous contacter à <a href="mailto:support@esq.com">support@esq.com</a>.</p>
@@ -90,83 +108,187 @@ exports.signup = async (req, res, next) => {
             `
         };
 
-        await transporter.sendMail(mailOptions);
+        try {
+            await transporter.sendMail(mailOptions);
+        } catch (emailError) {
+            console.error("Erreur lors de l'envoi de l'email de confirmation:", emailError);
+        }
 
-        res.status(201).json({ 
+        return res.status(201).json({ 
+            status: 'success',
             message: 'Utilisateur créé avec succès!', 
-            userId: user.id,
-            token: token
+            data: {
+                userId: user.id,
+                token: token
+            }
         });
     } catch (error) {
-        console.error('Erreur lors de la création de l\'utilisateur:', error);
+        console.error("Erreur lors de la création de l'utilisateur:", error);
+        return res.status(500).json({ 
+            status: 'error',
+            message: "Erreur interne du serveur lors de la création de l'utilisateur."
+        });
     }
 };
 
-exports.definePassword = async (req, res, next) => {
+exports.definePassword = async (req, res) => {
     try {
-        const { token, password, confirmPassword  } = req.body;
+        const { token, password, confirmPassword } = req.body;
 
         if (!token || !password || !confirmPassword) {
-            return res.status(400).json({ error: 'Token et mot de passe sont requis.' });
+            return res.status(400).json({ 
+                status: 'error',
+                message: 'Token et mot de passe sont requis.' 
+            });
         }
 
         if (password !== confirmPassword) {
-            return res.status(400).json({ error: 'Les mots de passe ne correspondent pas.' });
+            return res.status(400).json({ 
+                status: 'error',
+                message: 'Les mots de passe ne correspondent pas.' 
+            });
         }
 
-        const decodedToken = jwt.verify(token, process.env.SECRET_KEY_SIGNUP);
-        if (!decodedToken) {
-            return res.status(400).json({ error: 'Le temps d\'inscription est dépasssé.' });
+        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+        if (!passwordRegex.test(password)) {
+            return res.status(400).json({ 
+                status: 'error',
+                message: 'Le mot de passe doit contenir au moins 8 caractères, une majuscule, une minuscule, un chiffre et un caractère spécial.' 
+            });
         }
 
-        const user = await User.findByPk(decodedToken.userId);
+        let decodedToken;
+        try {
+            decodedToken = jwt.verify(token, process.env.SECRET_KEY_SIGNUP);
+        } catch (tokenError) {
+            if (tokenError.name === 'TokenExpiredError') {
+                return res.status(401).json({ 
+                    status: 'error',
+                    message: 'Le lien d\'activation a expiré. Veuillez demander un nouveau lien.' 
+                });
+            }
+            return res.status(401).json({ 
+                status: 'error',
+                message: 'Le token est invalide.' 
+            });
+        }
+
+        const user = await Users.findByPk(decodedToken.userId);
+        if (!user) {
+            return res.status(404).json({ 
+                status: 'error',
+                message: 'Utilisateur non trouvé.' 
+            });
+        }
+
+        if (user.isActive) {
+            return res.status(409).json({ 
+                status: 'error',
+                message: 'Ce compte est déjà activé.' 
+            });
+        }
+
         const hashedPassword = await bcrypt.hash(password, 10);
         user.password = hashedPassword;
         user.isActive = true;
         await user.save();
 
-        res.status(200).json({ message: 'Mot de passe défini avec succès!' });
+        return res.status(200).json({ 
+            status: 'success',
+            message: 'Votre compte est maintenant activé. Vous pouvez vous connecter.',
+            data: {
+                userId: user.id,
+                email: user.email
+            }
+        });
     } catch (error) {
         console.error('Erreur lors de la définition du mot de passe:', error);
+        return res.status(500).json({ 
+            status: 'error',
+            message: "Erreur interne du serveur lors de l'activation du compte." 
+        });
     }
 };
 
 
-exports.login = async (req, res, next) => {
+exports.login = async (req, res) => {
     try {
         const { email, password } = req.body;
 
         if (!email || !password) {
-            return res.status(400).json({ error: 'Email et mot de passe sont requis.' });
+            return res.status(400).json({ 
+                status: 'error',
+                message: 'Email et mot de passe sont requis.' 
+            });
         }
 
-        const user = await User.findOne({ where: { email: email } });
-        if (!user) {
-            return res.status(401).json({ message: 'Paire identifiant / mot de passe incorrecte' });
-        }else{
-            if (!user.isActive) {
-                return res.status(401).json({ message: 'L\'utilisateur n\'a pas encore défini son mot de passe.' });
-            }
+        const user = await Users.findOne({ 
+            where: { email },
+            include: [
+                {
+                    model: UserRolesCategories,
+                    include: [
+                        { model: Roles },
+                        { model: Categories }
+                    ]
+                }
+            ]
+        });
+
+        if (!user || !user.isActive) {
+            return res.status(401).json({ 
+                status: 'error',
+                message: 'Identifiants incorrects ou compte non activé.' 
+            });
         }
 
         const isPasswordValid = await bcrypt.compare(password, user.password);
         if (!isPasswordValid) {
-            return res.status(401).json({ message: 'Paire identifiant / mot de passe incorrecte' });
+            return res.status(401).json({ 
+                status: 'error',
+                message: 'Identifiants incorrects ou compte non activé.' 
+            });
         }
 
+        const userData = {
+            id: user.id,
+            firstName: user.first_name,
+            lastName: user.last_name,
+            email: user.email,
+            roles: user.UserRolesCategories ? user.UserRolesCategories.map(urc => ({
+                roleId: urc.roleId,
+                roleName: urc.Role ? urc.Role.name : null,
+                categoryId: urc.categoryId,
+                categoryName: urc.Category ? urc.Category.name : null
+            })) : []
+        };
+
         const token = jwt.sign(
-            { userId: user.id },
+            { 
+                userId: user.id,
+                roles: userData.roles.map(r => ({ 
+                    roleId: r.roleId, 
+                    categoryId: r.categoryId 
+                }))
+            },
             process.env.SECRET_KEY_LOGIN,
-            { expiresIn: '24h' }
+            '24h'
         );
 
-        res.status(200).json({
-            userId: user.id,
-            token: token
+        return res.status(200).json({
+            status: 'success',
+            message: 'Connexion réussie',
+            data: {
+                user: userData,
+                token,
+            }
         });
     } catch (error) {
         console.error('Erreur lors de la connexion:', error);
-        res.status(500).json({ error: 'Erreur lors de la connexion.' });
+        return res.status(500).json({ 
+            status: 'error',
+            message: 'Erreur interne du serveur lors de la tentative de connexion.'
+        });
     }
 };
 
