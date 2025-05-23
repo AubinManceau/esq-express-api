@@ -1,6 +1,6 @@
 const express = require('express');
 const { sequelize, sequelizeTest } = require('./config/database');
-const initModels = require('./models/Index');
+const initModels = require('./models/InitModels');
 const userRoutes = require('./routes/user');
 const articleRoutes = require('./routes/article');
 const trainingRoutes = require('./routes/training');

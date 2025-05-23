@@ -14,6 +14,7 @@ const defineTeams = require('./Teams');
 const defineUsersConvocation = require('./UsersConvocation');
 const defineConvocations = require('./Convocations');
 const defineArticleCategories = require('./ArticleCategories');
+const { sequelize } = require('../config/database');
 
 
 function initModels(sequelize) {

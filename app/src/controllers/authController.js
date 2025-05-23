@@ -1,17 +1,12 @@
-const Users = require('../models/Users');
-const Roles = require('../models/Roles');
-const Categories = require('../models/Categories');
-const UserRolesCategories = require('../models/UserRolesCategories');
+const { Users, Roles, Categories, Trainings, TrainingUsersStatus, UserRolesCategories } = require('../models');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const Trainings = require('../models/Trainings');
-const TrainingUsersStatus = require('../models/TrainingUsersStatus');
 const nodemailer = require('nodemailer');
 require('dotenv').config();
 
 exports.signup = async (req, res) => {
     try {
-        const { email, rolesId, categoriesId, firstName, lastName, phone } = req.body;
+        const { firstName, lastName, email, phone, rolesId, categoriesId } = req.body;
 
         if (!email || !Array.isArray(rolesId) || rolesId.length === 0 || !firstName || !lastName) {
             return res.status(400).json({ 
@@ -27,44 +22,56 @@ exports.signup = async (req, res) => {
                 message: 'Un utilisateur avec cet email existe déjà.'
             });
         }
-
+        
         const user = await Users.create({
-            first_name: firstName,
-            last_name: lastName,
-            email: email,
+            firstName,
+            lastName,
+            email,
             phone: phone || null,
         });
 
         const roleAssociations = [];
+        let categoryIndex = 0;
+        
         for (let i = 0; i < rolesId.length; i++) {
             const roleId = rolesId[i];
-            const categoryId = categoriesId && i < categoriesId.length ? categoriesId[i] : null;
-        
+            
             const roleInstance = await Roles.findOne({ where: { id: roleId } });
             if (!roleInstance) {
+                await Users.destroy({ where: { id: user.id } });
                 return res.status(400).json({ 
                     status: 'error',
                     message: `Le rôle correspondant à l'id '${roleId}' n'existe pas.` 
                 });
             }
-        
-            let categoryInstance = null;
-            if (categoryId) {
-                categoryInstance = await Categories.findOne({ where: { id: categoryId } });
-                if (!categoryInstance) {
-                    return res.status(400).json({ 
-                        status: 'error',
-                        message: `La catégorie correspondant à l'id '${categoryId}' n'existe pas.` 
-                    });
-                }
 
-                const trainings = await Trainings.findAll({
-                    where: { categoryId: categoryInstance.id }
-                }); 
+            let categoryInstance = null;
+            
+            if ([1, 2].includes(parseInt(roleId))) {
+                const categoryId = categoriesId && categoryIndex < categoriesId.length ? categoriesId[categoryIndex] : null;
+                categoryIndex++;
                 
-                await Promise.all(trainings.map(training =>
-                    TrainingUsersStatus.create({ userId: user.id, trainingId: training.id })
-                ));
+                if (categoryId) {
+                    categoryInstance = await Categories.findOne({ where: { id: categoryId } });
+                    if (!categoryInstance) {
+                        await Users.destroy({ where: { id: user.id } });
+                        return res.status(400).json({ 
+                            status: 'error',
+                            message: `La catégorie correspondant à l'id '${categoryId}' n'existe pas.` 
+                        });
+                    }
+
+                    const trainings = await Trainings.findAll({
+                        where: { categoryId: categoryInstance.id }
+                    }); 
+                    
+                    await Promise.all(trainings.map(training =>
+                        TrainingUsersStatus.create({ 
+                            userId: user.id, 
+                            trainingId: training.id 
+                        })
+                    ));
+                }
             }
         
             const association = await UserRolesCategories.create({
@@ -95,17 +102,37 @@ exports.signup = async (req, res) => {
             to: email,
             subject: "Bienvenue à l'ES Quelaines - Finalisez votre inscription",
             html: `
-                <h1>Bienvenue ${firstName} ${lastName} !</h1>
-                <p>Nous sommes ravis de vous accueillir à l'<strong>ESQ</strong>.</p>
-                <p>Pour finaliser votre inscription, veuillez suivre le lien ci-dessous. Ce lien est valide pendant <strong>48 heures</strong>.</p>
-                <a href="${process.env.FRONTEND_URL || 'https://monprojet.com'}/inscription?token=${token}" style="color: #0066cc; text-decoration: none; font-weight: bold;">Complétez votre inscription</a>
-                <p>Vous pouvez également télécharger notre application :</p>
-                <ul>
-                    <li><a href="https://www.apple.com/app-store/" target="_blank">Télécharger depuis l'App Store</a></li>
-                    <li><a href="https://play.google.com/store" target="_blank">Télécharger depuis le Play Store</a></li>
-                </ul>
-                <p>Si vous avez des questions, n'hésitez pas à nous contacter à <a href="mailto:support@esq.com">support@esq.com</a>.</p>
-                <p>À très bientôt,<br>Le bureau de l'ESQ</p>
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                    <h1 style="color: #333;">Bienvenue ${firstName} ${lastName} !</h1>
+                    <p>Nous sommes ravis de vous accueillir à l'<strong>ESQ</strong>.</p>
+                    <p>Pour finaliser votre inscription, veuillez suivre le lien ci-dessous. Ce lien est valide pendant <strong>48 heures</strong>.</p>
+                    <div style="text-align: center; margin: 20px 0;">
+                        <a href="${process.env.FRONTEND_URL || 'https://monprojet.com'}/inscription?token=${token}" 
+                           style="background-color: #0066cc; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
+                           Complétez votre inscription
+                        </a>
+                    </div>
+                    <p>Vous pouvez également télécharger notre application :</p>
+                    <ul style="list-style-type: none; padding: 0;">
+                        <li style="margin: 10px 0;">
+                            <a href="https://www.apple.com/app-store/" target="_blank" style="color: #0066cc; text-decoration: none;">
+                                📱 Télécharger depuis l'App Store
+                            </a>
+                        </li>
+                        <li style="margin: 10px 0;">
+                            <a href="https://play.google.com/store" target="_blank" style="color: #0066cc; text-decoration: none;">
+                                🤖 Télécharger depuis le Play Store
+                            </a>
+                        </li>
+                    </ul>
+                    <p>Si vous avez des questions, n'hésitez pas à nous contacter à 
+                       <a href="mailto:support@esq.com" style="color: #0066cc;">support@esq.com</a>.
+                    </p>
+                    <p style="margin-top: 30px;">
+                        À très bientôt,<br>
+                        <strong>Le bureau de l'ESQ</strong>
+                    </p>
+                </div>
             `
         };
 
@@ -119,12 +146,21 @@ exports.signup = async (req, res) => {
             status: 'success',
             message: 'Utilisateur créé avec succès!', 
             data: {
-                userId: user.id,
-                token: token
+                user: {
+                    id: user.id,
+                    firstName: user.firstName,
+                    lastName: user.lastName,
+                    email: user.email,
+                    phone: user.phone,
+                    createdAt: user.createdAt
+                },
+                token,
             }
         });
+
     } catch (error) {
         console.error("Erreur lors de la création de l'utilisateur:", error);
+        
         return res.status(500).json({ 
             status: 'error',
             message: "Erreur interne du serveur lors de la création de l'utilisateur."
@@ -253,8 +289,8 @@ exports.login = async (req, res) => {
 
         const userData = {
             id: user.id,
-            firstName: user.first_name,
-            lastName: user.last_name,
+            firstName: user.firstName,
+            lastName: user.lastName,
             email: user.email,
             roles: user.UserRolesCategories ? user.UserRolesCategories.map(urc => ({
                 roleId: urc.roleId,
@@ -292,5 +328,4 @@ exports.login = async (req, res) => {
         });
     }
 };
-
 
