@@ -8,7 +8,7 @@ const definePrivateMessages = require('./PrivateMessages');
 const defineGroupMessages = require('./GroupMessages');
 const defineArticles = require('./Articles');
 const defineChatGroups = require('./ChatGroups');
-const defineUsersChatGroups = require('./UsersChatGroups');
+const defineUsersChatGroup = require('./UsersChatGroup');
 const defineUsersCoachTeam = require('./UsersCoachTeam');
 const defineTeams = require('./Teams');
 const defineUsersConvocation = require('./UsersConvocation');
@@ -27,7 +27,7 @@ function initModels(sequelize) {
   const Trainings = defineTrainings(sequelize);
   const TrainingUsersStatus = defineTrainingUsersStatus(sequelize);
   const ChatGroups = defineChatGroups(sequelize);
-  const UsersChatGroups = defineUsersChatGroups(sequelize);
+  const UsersChatGroup = defineUsersChatGroup(sequelize);
   const UsersCoachTeam = defineUsersCoachTeam(sequelize);
   const Teams = defineTeams(sequelize);
   const UsersConvocation = defineUsersConvocation(sequelize);
@@ -67,11 +67,11 @@ function initModels(sequelize) {
   UserRolesCategories.belongsTo(Roles, { foreignKey: 'roleId' });
   Roles.hasMany(UserRolesCategories, { foreignKey: 'roleId' });
 
-  UsersChatGroups.belongsTo(Users, { foreignKey: 'userId' });
-  Users.hasMany(UsersChatGroups, { foreignKey: 'userId' });
+  UsersChatGroup.belongsTo(Users, { foreignKey: 'userId' });
+  Users.hasMany(UsersChatGroup, { foreignKey: 'userId' });
 
-  UsersChatGroups.belongsTo(ChatGroups, { foreignKey: 'chatGroupId' });
-  ChatGroups.hasMany(UsersChatGroups, { foreignKey: 'chatGroupId' });
+  UsersChatGroup.belongsTo(ChatGroups, { foreignKey: 'chatGroupId' });
+  ChatGroups.hasMany(UsersChatGroup, { foreignKey: 'chatGroupId' });
 
   UsersConvocation.belongsTo(Users, { foreignKey: 'userId' });
   Users.hasMany(UsersConvocation, { foreignKey: 'userId' });
@@ -97,7 +97,7 @@ function initModels(sequelize) {
     GroupMessages,
     Articles,
     ArticleCategories,
-    UsersChatGroups,
+    UsersChatGroup,
     ChatGroups,
     UsersCoachTeam,
     Teams,
