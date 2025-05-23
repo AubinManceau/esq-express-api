@@ -71,6 +71,12 @@ exports.signup = async (req, res) => {
                             trainingId: training.id 
                         })
                     ));
+                } else {
+                    await Users.destroy({ where: { id: user.id } });
+                    return res.status(400).json({ 
+                        status: 'error',
+                        message: `La catégorie est requise pour le rôle '${roleInstance.name}'.` 
+                    });
                 }
             }
         
@@ -92,13 +98,13 @@ exports.signup = async (req, res) => {
         const transporter = nodemailer.createTransport({
             service: 'gmail',
             auth: {
-                user: process.env.EMAIL_USER || 'aubinmanceau0@gmail.com',
-                pass: process.env.EMAIL_PASS || 'uirw iizy imyx qsah'
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PASS
             }
         });
 
         const mailOptions = {
-            from: process.env.EMAIL_FROM || 'contact@esq.com',
+            from: process.env.EMAIL_FROM,
             to: email,
             subject: "Bienvenue à l'ES Quelaines - Finalisez votre inscription",
             html: `
@@ -107,7 +113,7 @@ exports.signup = async (req, res) => {
                     <p>Nous sommes ravis de vous accueillir à l'<strong>ESQ</strong>.</p>
                     <p>Pour finaliser votre inscription, veuillez suivre le lien ci-dessous. Ce lien est valide pendant <strong>48 heures</strong>.</p>
                     <div style="text-align: center; margin: 20px 0;">
-                        <a href="${process.env.FRONTEND_URL || 'https://monprojet.com'}/inscription?token=${token}" 
+                        <a href="https://monprojet.com/inscription?token=${token}" 
                            style="background-color: #0066cc; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
                            Complétez votre inscription
                         </a>
@@ -201,7 +207,7 @@ exports.definePassword = async (req, res) => {
             if (tokenError.name === 'TokenExpiredError') {
                 return res.status(401).json({ 
                     status: 'error',
-                    message: 'Le lien d\'activation a expiré. Veuillez demander un nouveau lien.' 
+                    message: "Le lien d'activation a expiré. Veuillez demander un nouveau lien."
                 });
             }
             return res.status(401).json({ 
@@ -292,6 +298,7 @@ exports.login = async (req, res) => {
             firstName: user.firstName,
             lastName: user.lastName,
             email: user.email,
+            phone: user.phone,
             roles: user.UserRolesCategories ? user.UserRolesCategories.map(urc => ({
                 roleId: urc.roleId,
                 roleName: urc.Role ? urc.Role.name : null,
@@ -309,7 +316,7 @@ exports.login = async (req, res) => {
                 }))
             },
             process.env.SECRET_KEY_LOGIN,
-            '24h'
+            { expiresIn: '24h' }
         );
 
         return res.status(200).json({
@@ -328,4 +335,3 @@ exports.login = async (req, res) => {
         });
     }
 };
-
