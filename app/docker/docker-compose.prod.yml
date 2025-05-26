@@ -1,3 +1,5 @@
+version: "3.8"
+
 services:
   app:
     build:
@@ -5,62 +7,45 @@ services:
       dockerfile: Dockerfile
       args:
         NODE_ENV: ${NODE_ENV}
-    container_name: api_esq
+    container_name: api_esq_prod
     ports:
       - "${PORT}:3000"
     env_file:
-      - .env
+      - .env.prod
     environment:
       - NODE_ENV=${NODE_ENV}
     depends_on:
       - db
-      - db_test
 
   db:
     image: mariadb:10.11
-    container_name: db_esq
+    container_name: db_esq_prod
     restart: always
     env_file:
-      - .env
+      - .env.prod
     environment:
-      MARIADB_ROOT_PASSWORD: ${DB_PASSWORD}
-      MARIADB_DATABASE: ${DB_NAME}
+      MARIADB_ROOT_PASSWORD: ${DB_PROD_PASSWORD}
+      MARIADB_DATABASE: ${DB_PROD_NAME}
     ports:
       - "3306:3306"
     volumes:
       - db_data:/var/lib/mysql
 
-  db_test:
-    image: mariadb:10.11
-    container_name: db_test_esq
-    restart: always
-    env_file:
-      - .env
-    environment:
-      MARIADB_ROOT_PASSWORD: ${DB_TEST_PASSWORD}
-      MARIADB_DATABASE: ${DB_TEST_NAME}
-    ports:
-      - "3307:3306"
-    volumes:
-      - db_test_data:/var/lib/mysql
-
   phpmyadmin:
     image: phpmyadmin/phpmyadmin
-    container_name: pma_esq
+    container_name: pma_esq_prod
     restart: always
     ports:
       - "8080:80"
     env_file:
-      - .env
+      - .env.prod
     environment:
       PMA_ARBITRARY: 1
-      PMA_HOSTS: db,db_test
+      PMA_HOSTS: db
       PMA_USER: ${PMA_USER}
       PMA_PASSWORD: ${PMA_PASSWORD}
     depends_on:
       - db
-      - db_test
 
 volumes:
   db_data:
-  db_test_data:

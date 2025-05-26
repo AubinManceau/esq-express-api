@@ -1,5 +1,5 @@
 const express = require('express');
-const { sequelize, sequelizeTest } = require('./config/database');
+const { sequelize } = require('./config/database');
 const initModels = require('./models/InitModels');
 const userRoutes = require('./routes/user');
 const articleRoutes = require('./routes/article');
@@ -8,31 +8,6 @@ const authRoutes = require('./routes/auth');
 const seedRolesAndCategories = require('./seeders/seedRolesAndCategories');
 
 const models = initModels(sequelize);
-const testModels = initModels(sequelizeTest);
-
-sequelize.sync({ alter: true })
-  .then(() => {
-    console.log('✅ Base de données principale synchronisée avec Sequelize');
-    return seedRolesAndCategories(models);
-  })
-  .then(() => {
-    console.log('✅ Rôles et catégories initialisés dans la base de données principale');
-  })
-  .catch(error => {
-    console.error('❌ Erreur de synchronisation de la base de données principale:', error);
-  });
-
-sequelizeTest.sync({ force: true })
-  .then(() => {
-    console.log('✅ Base de données de test synchronisée avec Sequelize');
-    return seedRolesAndCategories(testModels); 
-  })
-  .then(() => {
-    console.log('✅ Rôles et catégories initialisés dans la base de données de test');
-  })
-  .catch(error => {
-    console.error('❌ Erreur de synchronisation de la base de données de test:', error);
-  });
 
 const app = express();
 
@@ -49,4 +24,16 @@ app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/articles', articleRoutes);
 app.use('/api/v1/trainings', trainingRoutes);
 
-module.exports = app;
+(async () => {
+  try {
+    await seedRolesAndCategories(models);
+    console.log('✅ Rôles et catégories initialisés dans la base de données principale');
+  } catch (err) {
+    console.error('❌ Erreur pendant l’initialisation des rôles et catégories :', err);
+  }
+})();
+
+module.exports = {
+  app,
+  models,
+};

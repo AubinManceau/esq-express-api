@@ -1,4 +1,5 @@
-const { Users, Roles, Categories, Trainings, TrainingUsersStatus, UserRolesCategories } = require('../models');
+const { models } = require('../app');
+const { Users, Roles, Categories, Trainings, TrainingUsersStatus, UserRolesCategories } = models;
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');

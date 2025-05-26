@@ -1,41 +1,37 @@
 const { Sequelize } = require('sequelize');
 require('dotenv').config();
 
-// Connexion à la base de données principale
+const env = process.env.NODE_ENV;
+
 const sequelize = new Sequelize(
-  process.env.DB_NAME,
-  process.env.DB_USER,
-  process.env.DB_PASSWORD,
+  env === 'prod' ? process.env.DB_PROD_NAME : process.env.DB_NAME,
+  env === 'prod' ? process.env.DB_PROD_USER : process.env.DB_USER,
+  env === 'prod' ? process.env.DB_PROD_PASSWORD : process.env.DB_PASSWORD,
   {
-    host: process.env.DB_HOST,
-    port: process.env.DB_PORT || 3306,
+    host: env === 'prod' ? process.env.DB_PROD_HOST : process.env.DB_HOST,
+    port: env === 'prod' ? process.env.DB_PROD_PORT : process.env.DB_PORT,
     dialect: 'mariadb',
     logging: false,
   }
 );
 
-// Connexion à la base de test
-const sequelizeTest = new Sequelize(
-  process.env.DB_TEST_NAME,
-  process.env.DB_TEST_USER,
-  process.env.DB_TEST_PASSWORD,
-  {
-    host: process.env.DB_TEST_HOST,
-    port: process.env.DB_TEST_PORT || 3306,
-    dialect: 'mariadb',
-    logging: true,
-  }
-);
+let sequelizeTest = null;
 
-sequelize.authenticate()
-  .then(() => console.log('✅ Connexion à la base principale OK'))
-  .catch(err => console.error('❌ Erreur connexion DB principale :', err));
-
-sequelizeTest.authenticate()
-  .then(() => console.log('✅ Connexion à la base de test OK'))
-  .catch(err => console.error('❌ Erreur connexion DB test :', err));
+if (env !== 'prod') {
+  sequelizeTest = new Sequelize(
+    process.env.DB_TEST_NAME,
+    process.env.DB_TEST_USER,
+    process.env.DB_TEST_PASSWORD,
+    {
+      host: process.env.DB_TEST_HOST,
+      port: process.env.DB_TEST_PORT,
+      dialect: 'mariadb',
+      logging: false,
+    }
+  );
+}
 
 module.exports = {
   sequelize,
-  sequelizeTest
+  sequelizeTest,
 };
