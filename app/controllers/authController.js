@@ -1,5 +1,4 @@
-const { models } = require('../app');
-const { Users, Roles, Categories, Trainings, TrainingUsersStatus, UserRolesCategories } = models;
+const { models } = require('../app.js');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
@@ -16,7 +15,7 @@ exports.signup = async (req, res) => {
             });
         }
 
-        const existingUser = await Users.findOne({ where: { email } });
+        const existingUser = await models.Users.findOne({ where: { email } });
         if (existingUser) {
             return res.status(409).json({ 
                 status: 'error',
@@ -24,7 +23,7 @@ exports.signup = async (req, res) => {
             });
         }
         
-        const user = await Users.create({
+        const user = await models.Users.create({
             firstName,
             lastName,
             email,
@@ -37,9 +36,9 @@ exports.signup = async (req, res) => {
         for (let i = 0; i < rolesId.length; i++) {
             const roleId = rolesId[i];
             
-            const roleInstance = await Roles.findOne({ where: { id: roleId } });
+            const roleInstance = await models.Roles.findOne({ where: { id: roleId } });
             if (!roleInstance) {
-                await Users.destroy({ where: { id: user.id } });
+                await models.Users.destroy({ where: { id: user.id } });
                 return res.status(400).json({ 
                     status: 'error',
                     message: `Le rôle correspondant à l'id '${roleId}' n'existe pas.` 
@@ -53,27 +52,27 @@ exports.signup = async (req, res) => {
                 categoryIndex++;
                 
                 if (categoryId) {
-                    categoryInstance = await Categories.findOne({ where: { id: categoryId } });
+                    categoryInstance = await models.Categories.findOne({ where: { id: categoryId } });
                     if (!categoryInstance) {
-                        await Users.destroy({ where: { id: user.id } });
+                        await models.Users.destroy({ where: { id: user.id } });
                         return res.status(400).json({ 
                             status: 'error',
                             message: `La catégorie correspondant à l'id '${categoryId}' n'existe pas.` 
                         });
                     }
 
-                    const trainings = await Trainings.findAll({
+                    const trainings = await models.Trainings.findAll({
                         where: { categoryId: categoryInstance.id }
                     }); 
                     
                     await Promise.all(trainings.map(training =>
-                        TrainingUsersStatus.create({ 
+                        models.TrainingUsersStatus.create({ 
                             userId: user.id, 
                             trainingId: training.id 
                         })
                     ));
                 } else {
-                    await Users.destroy({ where: { id: user.id } });
+                    await models.Users.destroy({ where: { id: user.id } });
                     return res.status(400).json({ 
                         status: 'error',
                         message: `La catégorie est requise pour le rôle '${roleInstance.name}'.` 
@@ -81,7 +80,7 @@ exports.signup = async (req, res) => {
                 }
             }
         
-            const association = await UserRolesCategories.create({
+            const association = await models.UserRolesCategories.create({
                 userId: user.id,
                 roleId: roleInstance.id,
                 categoryId: categoryInstance ? categoryInstance.id : null
@@ -217,7 +216,7 @@ exports.definePassword = async (req, res) => {
             });
         }
 
-        const user = await Users.findByPk(decodedToken.userId);
+        const user = await models.Users.findByPk(decodedToken.userId);
         if (!user) {
             return res.status(404).json({ 
                 status: 'error',
@@ -266,14 +265,14 @@ exports.login = async (req, res) => {
             });
         }
 
-        const user = await Users.findOne({ 
+        const user = await models.Users.findOne({ 
             where: { email },
             include: [
                 {
-                    model: UserRolesCategories,
+                    model: models.UserRolesCategories,
                     include: [
-                        { model: Roles },
-                        { model: Categories }
+                        { model: models.Roles },
+                        { model: models.Categories }
                     ]
                 }
             ]

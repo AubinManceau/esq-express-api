@@ -1,5 +1,5 @@
 const http = require('http');
-const app = require('./src/app.js');
+const {app} = require('./app/app.js');
 const swaggerjsdoc = require("swagger-jsdoc");
 const swaggerUi = require("swagger-ui-express");
 require('dotenv').config();

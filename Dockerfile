@@ -5,7 +5,7 @@ FROM node:20-alpine
 WORKDIR /usr/src/app
 
 # Étape 3 : Copier les fichiers package pour installer les deps
-COPY package*.json ./
+COPY app/package*.json ./
 
 # Étape 4 : Installer les dépendances
 # Utilise l'ARG pour basculer entre prod et dev
