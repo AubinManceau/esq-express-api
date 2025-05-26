@@ -10,7 +10,6 @@ const seedRolesAndCategories = require('./seeders/seedRolesAndCategories');
 const models = initModels(sequelize);
 const testModels = initModels(sequelizeTest);
 
-// BDD principale
 sequelize.sync({ alter: true })
   .then(() => {
     console.log('✅ Base de données principale synchronisée avec Sequelize');
@@ -23,7 +22,6 @@ sequelize.sync({ alter: true })
     console.error('❌ Erreur de synchronisation de la base de données principale:', error);
   });
 
-// BDD de test
 sequelizeTest.sync({ force: true })
   .then(() => {
     console.log('✅ Base de données de test synchronisée avec Sequelize');
