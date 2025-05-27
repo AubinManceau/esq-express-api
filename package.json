@@ -4,16 +4,16 @@
   "main": "server.js",
   "type": "module",
   "scripts": {
-    "seed" : "docker-compose exec app npx sequelize-cli db:seed:all",
-    "migrate" : "docker-compose exec app npx sequelize-cli db:migrate",
-    "seed:undo" : "docker-compose exec app npx sequelize-cli db:seed:undo:all",
-    "migrate:undo" : "docker-compose exec app npx sequelize-cli db:migrateundo:all"
+    "seed": "docker-compose exec app npx sequelize-cli db:seed:all",
+    "migrate": "docker-compose exec app npx sequelize-cli db:migrate",
+    "seed:undo": "docker-compose exec app npx sequelize-cli db:seed:undo:all",
+    "migrate:undo": "docker-compose exec app npx sequelize-cli db:migrateundo:all"
   },
   "author": "",
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "bcrypt": "^5.1.1",
+    "bcryptjs": "^3.0.2",
     "dotenv": "^16.4.7",
     "express": "^4.21.0",
     "jsonwebtoken": "^9.0.2",

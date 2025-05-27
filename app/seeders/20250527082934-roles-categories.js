@@ -1,7 +1,7 @@
 'use strict';
 
-module.exports = {
-  async up (queryInterface, Sequelize) {
+export default {
+  async up (queryInterface) {
     const roles = ['joueur', 'coach', 'membre', 'admin'];
     const categories = ['U7', 'U9', 'U11', 'U13', 'U15', 'U18', 'senior', 'veteran', 'futsal'];
 
@@ -21,7 +21,7 @@ module.exports = {
     await queryInterface.bulkInsert('categories', categoryObjects, {});
   },
 
-  async down (queryInterface, Sequelize) {
+  async down (queryInterface) {
     await queryInterface.bulkDelete('roles', {
       name: ['joueur', 'coach', 'membre', 'admin']
     }, {});

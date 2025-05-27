@@ -1,7 +1,7 @@
 import models from '../models/index.js';
 import { Op } from 'sequelize';
 
-export const createTraining = async (req, res) => {
+const createTraining = async (req, res) => {
     try {
         const { type, date, startTime, status, categoryId } = req.body;
         if (!type || !date || !startTime || !categoryId) {
@@ -70,7 +70,7 @@ export const createTraining = async (req, res) => {
     }
 };
 
-export const updateTraining = async (req, res) => {
+const updateTraining = async (req, res) => {
     try {
         const { type, date, startTime, status, categoryId } = req.body;
         const trainingId = req.params.id;
@@ -154,7 +154,7 @@ export const updateTraining = async (req, res) => {
     }
 };
 
-export const deleteTraining = async (req, res) => {
+const deleteTraining = async (req, res) => {
     try {
         const trainingId = req.params.id;
 
@@ -182,7 +182,7 @@ export const deleteTraining = async (req, res) => {
     }
 };
 
-export const getTrainings = async (res) => {
+const getTrainings = async (res) => {
     try {
         const trainings = await models.Trainings.findAll({
             include: {
@@ -218,7 +218,7 @@ export const getTrainings = async (res) => {
 };
 
 
-export const getTraining = async (req, res) => {
+const getTraining = async (req, res) => {
     try {
         const trainingId = req.params.id;
 
@@ -281,7 +281,7 @@ export const getTraining = async (req, res) => {
     }
 };
 
-export const getUpcomingTrainingsByUserCategory = async (req, res) => {
+const getUpcomingTrainingsByUserCategory = async (req, res) => {
     try {
         const userId = req.auth.userId;
         const today = new Date().toISOString().split('T')[0];
@@ -332,7 +332,7 @@ export const getUpcomingTrainingsByUserCategory = async (req, res) => {
     }
 };
 
-export const updateTrainingUserStatus = async (req, res) => {
+const updateTrainingUserStatus = async (req, res) => {
     try {
         const userId = req.auth.userId;
         const { trainingId } = req.params;
@@ -378,4 +378,14 @@ export const updateTrainingUserStatus = async (req, res) => {
             message: "Erreur serveur lors de la mise à jour du statut."
         });
     }
+};
+
+export default {
+    createTraining,
+    updateTraining,
+    deleteTraining,
+    getTrainings,
+    getTraining,
+    getUpcomingTrainingsByUserCategory,
+    updateTrainingUserStatus
 };

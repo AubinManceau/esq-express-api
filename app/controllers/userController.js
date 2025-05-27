@@ -1,8 +1,8 @@
 import models from '../models/index.js';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import 'dotenv/config';
 
-export const updateUser = async (req, res, next) => {
+const updateUser = async (req, res, next) => {
     try{
         const userId = req.params.userId;
         const {email, firstName, lastName, roleName, categoryName } = req.body;
@@ -55,7 +55,7 @@ export const updateUser = async (req, res, next) => {
     }  
 };
 
-export const updatePassword = async (req, res, next) => {
+const updatePassword = async (req, res, next) => {
     try {
         const userId = req.params.userId;
         const { oldPassword, newPassword, confirmPassword } = req.body;
@@ -89,7 +89,7 @@ export const updatePassword = async (req, res, next) => {
     }
 };
 
-export const getUser = async (req, res, next) => {
+const getUser = async (req, res, next) => {
     try {
         const userId = req.params.userId;
 
@@ -117,7 +117,7 @@ export const getUser = async (req, res, next) => {
     }
 };
 
-export const getUsers = async (req, res, next) => {
+const getUsers = async (req, res, next) => {
     try {
         const users = await models.Users.findAll();
 
@@ -139,7 +139,7 @@ export const getUsers = async (req, res, next) => {
     }
 };
 
-export const deleteUser = async (req, res, next) => {
+const deleteUser = async (req, res, next) => {
     try {
         const userId = req.params.userId;
 
@@ -163,7 +163,7 @@ export const deleteUser = async (req, res, next) => {
     }
 };
 
-export const getUsersByRole = async (req, res, next) => {
+const getUsersByRole = async (req, res, next) => {
     try {
         const roleName = req.params.roleName;
 
@@ -191,7 +191,7 @@ export const getUsersByRole = async (req, res, next) => {
     }
 };
 
-export const getUsersByRolesAndCategories = async (req, res, next) => {
+const getUsersByRolesAndCategories = async (req, res, next) => {
     try {
         const roleName = req.params.roleName;
         const categoryName = req.params.categoryName;
@@ -222,4 +222,14 @@ export const getUsersByRolesAndCategories = async (req, res, next) => {
     } catch (error) {
         console.error('Erreur lors de la récupération des utilisateurs par rôle et catégorie:', error);
     }
+};
+
+export default {
+    updateUser,
+    updatePassword,
+    getUser,
+    getUsers,
+    deleteUser,
+    getUsersByRole,
+    getUsersByRolesAndCategories
 };

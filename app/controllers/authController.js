@@ -1,10 +1,10 @@
 import models from '../models/index.js';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import nodemailer from 'nodemailer';
 import 'dotenv/config';
 
-export const signup = async (req, res) => {
+const signup = async (req, res) => {
     try {
         const { firstName, lastName, email, phone, rolesId, categoriesId } = req.body;
 
@@ -174,7 +174,7 @@ export const signup = async (req, res) => {
     }
 };
 
-export const definePassword = async (req, res) => {
+const definePassword = async (req, res) => {
     try {
         const { token, password, confirmPassword } = req.body;
 
@@ -254,7 +254,7 @@ export const definePassword = async (req, res) => {
 };
 
 
-export const login = async (req, res) => {
+const login = async (req, res) => {
     try {
         const { email, password } = req.body;
 
@@ -334,4 +334,10 @@ export const login = async (req, res) => {
             message: 'Erreur interne du serveur lors de la tentative de connexion.'
         });
     }
+};
+
+export default {
+    signup,
+    definePassword,
+    login
 };

@@ -1,6 +1,6 @@
 import models from '../models/index.js';
 
-export const createArticle = async (req, res, next) => {
+const createArticle = async (req, res, next) => {
     try {
         const {categories, title, content, image, date, auther} = req.body;
 
@@ -35,7 +35,7 @@ export const createArticle = async (req, res, next) => {
     }
 };
 
-export const updateArticle = async (req, res, next) => {
+const updateArticle = async (req, res, next) => {
     try {
         const id = req.params.id;
         const {categories, title, content, image, date, auther} = req.body;
@@ -74,7 +74,7 @@ export const updateArticle = async (req, res, next) => {
     }
 };
 
-export const deleteArticle = async (req, res, next) => {
+const deleteArticle = async (req, res, next) => {
     try {
         const id = req.params.id;
         const article = await models.Articles.findByPk(id);
@@ -88,7 +88,7 @@ export const deleteArticle = async (req, res, next) => {
     }
 };
 
-export const getAllArticles = async (req, res, next) => {
+const getAllArticles = async (req, res, next) => {
     try {
         const articles = await models.Articles.findAll();
         res.status(200).json(articles);
@@ -97,7 +97,7 @@ export const getAllArticles = async (req, res, next) => {
     }
 };
 
-export const getOneArticle = async (req, res, next) => {
+const getOneArticle = async (req, res, next) => {
     try {
         const article = await models.Articles.findByPk(req.params.id);
         if (!article) {
@@ -109,7 +109,7 @@ export const getOneArticle = async (req, res, next) => {
     }
 };
 
-export const getArticlesByCategory = async (req, res, next) => {
+const getArticlesByCategory = async (req, res, next) => {
     try {
         const category = req.params.category;
         
@@ -134,4 +134,13 @@ export const getArticlesByCategory = async (req, res, next) => {
     } catch (error) {
         res.status(400).json({ error });
     }
+};
+
+export default {
+    createArticle,
+    updateArticle,
+    deleteArticle,
+    getAllArticles,
+    getOneArticle,
+    getArticlesByCategory
 };
