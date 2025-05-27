@@ -1,26 +1,34 @@
-const Training = require('../models/Trainings');
-const Category = require('../models/Categories');
 const { Op } = require('sequelize');
-const UserRoleCategory = require('../models/UserRolesCategories');
-const TrainingUserStatus = require('../models/TrainingUsersStatus');
+const { models } = require('../app.js');
 
 exports.createTraining = async (req, res, next) => {
     try {
-        const { categoryId, ...trainingData } = req.body;
-
-        if (!categoryId) {
-            return res.status(400).json({ error: "categoryId est requis" });
+        const { type, date, startTime, status, categoryId } = req.body;
+        if (!type || !date || !startTime || !categoryId) {
+            return res.status(400).json({ 
+                status: 'error',
+                message: 'Type, Date, Heure et une catégorie sont requis.'
+            });
         }
 
-        const category = await Category.findByPk(categoryId);
+        const category = await models.Categories.findByPk(categoryId);
         if (!category) {
-            return res.status(404).json({ error: "Catégorie introuvable" });
+            return res.status(404).json({ 
+                status: 'error',
+                message: 'Catégorie non trouvé.' 
+            });
         }
 
-        const training = await Training.create({ ...trainingData, categoryId });
+        const training = await models.Trainings.create({ 
+            type,
+            date,
+            startTime,
+            status,
+            categoryId
+        });
         
         const rolesId = [1, 2];
-        const users = await UserRoleCategory.findAll({
+        const users = await models.UserRolesCategories.findAll({
             where: {
                 categoryId: categoryId,
                 roleId: { [Op.in]: rolesId }
@@ -28,33 +36,70 @@ exports.createTraining = async (req, res, next) => {
         });
 
         await Promise.all(users.map(user =>
-            TrainingUserStatus.create({ userId: user.userId, trainingId: training.id })
+            models.TrainingUsersStatus.create({ 
+                userId: user.userId, 
+                trainingId: training.id 
+            })
         ));
 
-        res.status(201).json({ message: 'Entrainement créé !', training });
+        return res.status(201).json({ 
+            status: 'success',
+            message: 'Entrainement créé avec succès!', 
+            data: {
+                training: {
+                    id: training.id,
+                    type: training.type,
+                    date: training.date,
+                    startTime: training.startTime,
+                    status: training.status,
+                    category : {
+                        id: category.id,
+                        name: category.name
+                    }
+                },
+            }
+        });
 
     } catch (error) {
-        res.status(400).json({ error: error.message });
+        console.error("Erreur lors de la création de l'entrainement:", error);
+        
+        return res.status(500).json({ 
+            status: 'error',
+            message: "Erreur interne du serveur lors de la création de l'entrainement."
+        });
     }
 };
 
 exports.updateTraining = async (req, res, next) => {
     try {
-        const { categoryId, ...trainingData } = req.body;
+        const { type, date, startTime, status, categoryId } = req.body;
         const trainingId = req.params.id;
 
-        const training = await Training.findByPk(trainingId);
+        const training = await models.Trainings.findByPk(trainingId);
         if (!training) {
-            return res.status(404).json({ message: 'Entrainement non trouvé !' });
+            return res.status(404).json({ 
+                status: 'error',
+                message: 'Entrainement non trouvé.' 
+            });
         }
 
-        if (categoryId) {
-            await TrainingUserStatus.destroy({
+        let category = null;
+
+        if (categoryId && categoryId !== training.categoryId) {
+            const category = await models.Categories.findByPk(categoryId);
+            if (!category) {
+                return res.status(404).json({ 
+                    status: 'error',
+                    message: 'Catégorie non trouvé.' 
+                });
+            }
+
+            await models.TrainingUsersStatus.destroy({
                 where: { trainingId: req.params.id }
             });
 
             const rolesId = [1, 2];
-            const users = await UserRoleCategory.findAll({
+            const users = await models.UserRolesCategories.findAll({
                 where: {
                     categoryId: categoryId,
                     roleId: { [Op.in]: rolesId }
@@ -62,18 +107,50 @@ exports.updateTraining = async (req, res, next) => {
             });
 
             await Promise.all(users.map(user =>
-                TrainingUserStatus.create({
+                models.TrainingUsersStatus.create({
                     userId: user.userId,
                     trainingId: req.params.id
                 })
             ));
         }
 
-        await training.update({ ...trainingData, categoryId });
+        await training.update({ 
+            type,
+            date,
+            startTime,
+            status,
+            categoryId
+        });
 
-        res.status(200).json({ message: 'Entrainement modifié' });
+        if (!category && training.categoryId) {
+            category = await models.Categories.findByPk(training.categoryId);
+        }
+
+        return res.status(200).json({ 
+            status: 'success',
+            message: 'Entrainement modifié avec succès!', 
+            data: {
+                training: {
+                    id: training.id,
+                    type: training.type,
+                    date: training.date,
+                    startTime: training.startTime,
+                    status: training.status,
+                    category : {
+                        id: category.id,
+                        name: category.name
+                    }
+                },
+            }
+        });
+
     } catch (error) {
-        res.status(400).json({ error: error.message });
+        console.error("Erreur lors de la modification de l'entrainement:", error);
+        
+        return res.status(500).json({ 
+            status: 'error',
+            message: "Erreur interne du serveur lors de la modification de l'entrainement."
+        });
     }
 };
 
