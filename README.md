@@ -59,7 +59,5 @@ npm run seed
 
 ## 📖 Liens utiles
 
-API - [http://localhost:3000/api/v1](http://localhost:3000/api/v1/api-docs)
+API - [http://localhost:3000/api/v1](http://localhost:3000/api/v1/api-docs) \
 PMA - [http://localhost:8080](http://localhost:8080)
-
----
