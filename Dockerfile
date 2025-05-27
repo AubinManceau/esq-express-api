@@ -5,14 +5,14 @@ FROM node:20-alpine
 WORKDIR /usr/src/app
 
 # Étape 3 : Copier les fichiers package pour installer les deps
-COPY app/package*.json ./
+COPY package*.json ./
 
 # Étape 4 : Installer les dépendances
 # Utilise l'ARG pour basculer entre prod et dev
-ARG NODE_ENV=prod
+ARG NODE_ENV=production
 ENV NODE_ENV=$NODE_ENV
 
-RUN if [ "$NODE_ENV" = "dev" ]; \
+RUN if [ "$NODE_ENV" = "development" ]; \
     then npm install; \
     else npm install --omit=dev; \
     fi
