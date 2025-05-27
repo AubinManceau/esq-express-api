@@ -20,7 +20,7 @@ module.exports = (sequelize) => {
     },
     userAuthorId: {
       type: DataTypes.INTEGER,
-      allowNull: false,
+      allowNull: true,
     },
   }, {
     tableName: 'articles',

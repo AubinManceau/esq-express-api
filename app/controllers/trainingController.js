@@ -1,7 +1,7 @@
 const { Op } = require('sequelize');
 const { models } = require('../app.js');
 
-exports.createTraining = async (req, res, next) => {
+exports.createTraining = async (req, res) => {
     try {
         const { type, date, startTime, status, categoryId } = req.body;
         if (!type || !date || !startTime || !categoryId) {
@@ -70,7 +70,7 @@ exports.createTraining = async (req, res, next) => {
     }
 };
 
-exports.updateTraining = async (req, res, next) => {
+exports.updateTraining = async (req, res) => {
     try {
         const { type, date, startTime, status, categoryId } = req.body;
         const trainingId = req.params.id;
@@ -154,36 +154,87 @@ exports.updateTraining = async (req, res, next) => {
     }
 };
 
-exports.deleteTraining = async (req, res, next) => {
+exports.deleteTraining = async (req, res) => {
     try {
         const trainingId = req.params.id;
-        const training = await Training.findByPk(trainingId);
+
+        const training = await models.Trainings.findByPk(trainingId);
         if (!training) {
-            return res.status(404).json({ message: 'Entrainement non trouvé !' });
+            return res.status(404).json({ 
+                status: 'error',
+                message: 'Entrainement non trouvé.' 
+            });
         }
-        await TrainingUserStatus.destroy({ where: { trainingId } });
+
         await training.destroy();
-        res.status(200).json({ message: 'Entrainement supprimé !' });
+
+        return res.status(200).json({ 
+            status: 'success',
+            message: 'Entrainement supprimé avec succès!', 
+        });
     } catch (error) {
-        res.status(400).json({ error });
+        console.error("Erreur lors de la suppression de l'entrainement:", error);
+        
+        return res.status(500).json({ 
+            status: 'error',
+            message: "Erreur interne du serveur lors de la suppression de l'entrainement."
+        });
     }
 };
 
-exports.getAllTrainings = async (req, res, next) => {
+exports.getTrainings = async (res) => {
     try {
-        const trainings = await Training.findAll();
-        res.status(200).json(trainings);
+        const trainings = await models.Trainings.findAll({
+            include: {
+                model: models.Categories,
+                as: 'category',
+                attributes: ['id', 'name'],
+            }
+        });
+
+        return res.status(200).json({ 
+            status: 'success',
+            message: 'Entrainements récupérés avec succès!', 
+            data: trainings.map(training => ({
+                id: training.id,
+                type: training.type,
+                date: training.date,
+                startTime: training.startTime,
+                status: training.status,
+                category: {
+                    id: training.category.id,
+                    name: training.category.name
+                }
+            }))
+        });
     } catch (error) {
-        res.status(400).json({ error });
+        console.error("Erreur lors de la récupération des entrainements:", error);
+        
+        return res.status(500).json({ 
+            status: 'error',
+            message: "Erreur interne du serveur lors de la récupération des entrainements."
+        });
     }
 };
 
-exports.getOneTraining = async (req, res, next) => {
+
+exports.getTraining = async (req, res) => {
     try {
         const trainingId = req.params.id;
-        const training = await Training.findByPk(trainingId);
+
+        const training = await models.Trainings.findByPk(trainingId, {
+            include: {
+                model: models.Categories,
+                as: 'category',
+                attributes: ['id', 'name']
+            }
+        });
+
         if (!training) {
-            return res.status(404).json({ message: 'Entrainement non trouvé !' });
+            return res.status(404).json({ 
+                status: 'error',
+                message: 'Entrainement non trouvé.' 
+            });
         }
 
         const presentCount = await TrainingUserStatus.count({
@@ -195,55 +246,88 @@ exports.getOneTraining = async (req, res, next) => {
         });
 
         const notRespondedCount = await TrainingUserStatus.count({
-            where: { trainingId, status: 'notResponded' },
+            where: { trainingId, status: 'pending' },
         });
 
-        res.status(200).json(
-            training,
-            {
-                present: presentCount,
-                absent: absentCount,
-                notResponded: notRespondedCount,
+        return res.status(200).json({ 
+            status: 'success',
+            message: 'Entrainement modifié avec succès!', 
+            data: {
+                training: {
+                    id: training.id,
+                    type: training.type,
+                    date: training.date,
+                    startTime: training.startTime,
+                    status: training.status,
+                    category : {
+                        id: training.category.id,
+                        name: training.category.name
+                    },
+                    responses : {
+                        present: presentCount,
+                        pending: notRespondedCount,
+                        absent: absentCount
+                    }
+                },
             }
-        );
-    } catch (error) {
-        res.status(400).json({ error });
-    }
-};
-
-exports.getTrainingsByCategory = async (req, res, next) => {
-    try {
-        const categoryName = req.params.name;
-        const category = await Category.findOne({ where: { name: categoryName } });
-        if (!category) {
-            return res.status(403).json({ message: 'Catégorie non trouvée !' });
-        }
-        const categoryId = category.id;
-        const trainings = await Training.findAll({ where: { categoryId } });
-        if (!trainings.length) {
-            return res.status(404).json({ message: 'Aucun entrainement trouvé pour cette catégorie !' });
-        }
-        res.status(200).json(trainings);
-    } catch (error) {
-        res.status(400).json({ error });
-    }
-};
-
-exports.getTrainingsByUser = async (req, res, next) => {
-    try {
-        const userId = req.params.id;
-        const trainings = await Training.findAll({
-            include: [{
-                model: TrainingUserStatus,
-                where: { userId },
-                required: true
-            }]
         });
-        if (!trainings.length) {
-            return res.status(404).json({ message: 'Aucun entrainement trouvé pour cet utilisateur !' });
-        }
-        res.status(200).json(trainings);
     } catch (error) {
-        res.status(400).json({ error });
+        console.error("Erreur lors de la récupération de l'entrainement:", error);
+        
+        return res.status(500).json({ 
+            status: 'error',
+            message: "Erreur interne du serveur lors de la récupération de l'entrainement."
+        });
+    }
+};
+
+exports.getUpcomingTrainingsByUserCategory = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const today = new Date().toISOString().split('T')[0];
+
+        const userCategories = await models.UserRolesCategories.findAll({
+            where: { userId },
+            attributes: ['categoryId']
+        });
+
+        if (!userCategories || userCategories.length === 0) {
+            return res.status(404).json({
+                status: "error",
+                message: "Catégorie(s) de l'utilisateur non trouvée(s)."
+            });
+        }
+
+        const categoryIds = userCategories.map(uc => uc.categoryId);
+
+        const trainings = await models.Trainings.findAll({
+            where: {
+                categoryId: {
+                    [Op.in]: categoryIds
+                },
+                date: {
+                    [Op.gte]: today
+                }
+            },
+            order: [['date', 'ASC']],
+            include: {
+                model: models.Categories,
+                as: 'category',
+                attributes: ['id', 'name']
+            }
+        });
+
+        return res.status(200).json({
+            status: 'success',
+            message: 'Entrainements à venir récupérés avec succès!',
+            data: trainings
+        });
+
+    } catch (error) {
+        console.error("Erreur lors de la récupération des entrainements à venir:", error);
+        return res.status(500).json({
+            status: 'error',
+            message: "Erreur interne du serveur lors de la récupération des entrainements."
+        });
     }
 };

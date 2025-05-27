@@ -27,13 +27,13 @@ module.exports = {
       },
       userAuthorId: {
         type: Sequelize.INTEGER,
-        allowNull: false,
+        allowNull: true,
         references: {
           model: 'users',
           key: 'id'
         },
         onUpdate: 'CASCADE',
-        onDelete: 'CASCADE'
+        onDelete: 'SET NULL'
       },
       createdAt: {
         allowNull: false,
