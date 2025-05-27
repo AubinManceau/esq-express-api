@@ -43,13 +43,13 @@ cp .env.example .env
 docker-compose up --build
 ```
 
-#### 🛠️ Migrations et Seeders
+🛠️ Migrations et Seeders
 ```bash
 npm run migrate
 npm run seed
 ```
 
-#### 🧪 Lancer les tests
+🧪 Lancer les tests
 ```bash
 # Pas encore développé
 ```
