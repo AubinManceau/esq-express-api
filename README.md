@@ -35,6 +35,7 @@ git clone https://github.com/votre-utilisateur/votre-projet.git
 cd votre-projet
 cp .env.example .env
 # Modifier les variables d'environnement
+npm install
 ```
 
 #### 🐳 Lancer l’environnement avec Docker
