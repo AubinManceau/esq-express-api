@@ -1,5 +1,5 @@
 const { Op } = require('sequelize');
-const { models } = require('../app.js');
+const models = require('../models');
 
 exports.createTraining = async (req, res) => {
     try {

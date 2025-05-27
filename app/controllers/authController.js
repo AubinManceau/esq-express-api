@@ -1,4 +1,4 @@
-const { models } = require('../app.js');
+const models = require('../models');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
