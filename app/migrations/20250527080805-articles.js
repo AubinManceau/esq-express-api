@@ -1,24 +1,35 @@
 'use strict';
 
-/** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('teams', {
+    await queryInterface.createTable('articles', {
       id: {
         allowNull: false,
         autoIncrement: true,
         primaryKey: true,
         type: Sequelize.INTEGER
       },
-      name: {
-        type: Sequelize.STRING(50),
+      title: {
+        type: Sequelize.STRING,
         allowNull: false,
       },
-      categoryId: {
+      content: {
+        type: Sequelize.TEXT,
+        allowNull: false,
+      },
+      image: {
+        type: Sequelize.STRING,
+        allowNull: true,
+      },
+      date: {
+        type: Sequelize.DATE,
+        allowNull: false,
+      },
+      userAuthorId: {
         type: Sequelize.INTEGER,
         allowNull: false,
         references: {
-          model: 'categories',
+          model: 'users',
           key: 'id'
         },
         onUpdate: 'CASCADE',
@@ -36,11 +47,11 @@ module.exports = {
       }
     });
 
-    await queryInterface.addIndex('teams', ['categoryId']);
-    await queryInterface.addIndex('teams', ['name']);
+    await queryInterface.addIndex('articles', ['userAuthorId']);
+    await queryInterface.addIndex('articles', ['date']);
   },
 
   async down(queryInterface, Sequelize) {
-    await queryInterface.dropTable('teams');
+    await queryInterface.dropTable('articles');
   }
 };

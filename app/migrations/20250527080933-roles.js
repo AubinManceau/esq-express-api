@@ -1,9 +1,8 @@
 'use strict';
 
-/** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('categories', {
+    await queryInterface.createTable('roles', {
       id: {
         allowNull: false,
         autoIncrement: true,
@@ -13,7 +12,7 @@ module.exports = {
       name: {
         type: Sequelize.STRING,
         allowNull: false,
-        unique: true,
+        unique: true
       },
       createdAt: {
         allowNull: false,
@@ -27,13 +26,10 @@ module.exports = {
       }
     });
 
-    await queryInterface.addIndex('categories', ['name'], {
-      unique: true,
-      name: 'categories_name_unique'
-    });
+    await queryInterface.addIndex('roles', ['name']);
   },
 
   async down(queryInterface, Sequelize) {
-    await queryInterface.dropTable('categories');
+    await queryInterface.dropTable('roles');
   }
 };
