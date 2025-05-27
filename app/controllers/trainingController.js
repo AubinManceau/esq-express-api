@@ -283,7 +283,7 @@ exports.getTraining = async (req, res) => {
 
 exports.getUpcomingTrainingsByUserCategory = async (req, res) => {
     try {
-        const userId = req.user.id;
+        const userId = req.auth.userId;
         const today = new Date().toISOString().split('T')[0];
 
         const userCategories = await models.UserRolesCategories.findAll({
@@ -328,6 +328,54 @@ exports.getUpcomingTrainingsByUserCategory = async (req, res) => {
         return res.status(500).json({
             status: 'error',
             message: "Erreur interne du serveur lors de la récupération des entrainements."
+        });
+    }
+};
+
+exports.updateTrainingUserStatus = async (req, res) => {
+    try {
+        const userId = req.auth.userId;
+        const { trainingId } = req.params;
+        const { status } = req.body;
+
+        const allowedStatuses = ['present', 'absent', 'pending'];
+
+        if (!allowedStatuses.includes(status)) {
+            return res.status(400).json({
+                status: 'error',
+                message: 'Statut invalide. Les statuts autorisés sont: present, absent, pending.'
+            });
+        }
+
+        const record = await models.TrainingUsersStatus.findOne({
+            where: { trainingId, userId }
+        });
+
+        if (!record) {
+            return res.status(404).json({
+                status: 'error',
+                message: "Aucune réponse d'utilisateur trouvée pour cet entrainement."
+            });
+        }
+
+        record.status = status;
+        await record.save();
+
+        return res.status(200).json({
+            status: 'success',
+            message: "Statut mis à jour avec succès.",
+            data: {
+                trainingId,
+                userId,
+                status
+            }
+        });
+
+    } catch (error) {
+        console.error("Erreur lors de la mise à jour du statut de participation:", error);
+        return res.status(500).json({
+            status: 'error',
+            message: "Erreur serveur lors de la mise à jour du statut."
         });
     }
 };
