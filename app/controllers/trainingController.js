@@ -1,7 +1,7 @@
-const { Op } = require('sequelize');
-const models = require('../models');
+import models from '../models/index.js';
+import { Op } from 'sequelize';
 
-exports.createTraining = async (req, res) => {
+export const createTraining = async (req, res) => {
     try {
         const { type, date, startTime, status, categoryId } = req.body;
         if (!type || !date || !startTime || !categoryId) {
@@ -70,7 +70,7 @@ exports.createTraining = async (req, res) => {
     }
 };
 
-exports.updateTraining = async (req, res) => {
+export const updateTraining = async (req, res) => {
     try {
         const { type, date, startTime, status, categoryId } = req.body;
         const trainingId = req.params.id;
@@ -154,7 +154,7 @@ exports.updateTraining = async (req, res) => {
     }
 };
 
-exports.deleteTraining = async (req, res) => {
+export const deleteTraining = async (req, res) => {
     try {
         const trainingId = req.params.id;
 
@@ -182,7 +182,7 @@ exports.deleteTraining = async (req, res) => {
     }
 };
 
-exports.getTrainings = async (res) => {
+export const getTrainings = async (res) => {
     try {
         const trainings = await models.Trainings.findAll({
             include: {
@@ -218,7 +218,7 @@ exports.getTrainings = async (res) => {
 };
 
 
-exports.getTraining = async (req, res) => {
+export const getTraining = async (req, res) => {
     try {
         const trainingId = req.params.id;
 
@@ -281,7 +281,7 @@ exports.getTraining = async (req, res) => {
     }
 };
 
-exports.getUpcomingTrainingsByUserCategory = async (req, res) => {
+export const getUpcomingTrainingsByUserCategory = async (req, res) => {
     try {
         const userId = req.auth.userId;
         const today = new Date().toISOString().split('T')[0];
@@ -332,7 +332,7 @@ exports.getUpcomingTrainingsByUserCategory = async (req, res) => {
     }
 };
 
-exports.updateTrainingUserStatus = async (req, res) => {
+export const updateTrainingUserStatus = async (req, res) => {
     try {
         const userId = req.auth.userId;
         const { trainingId } = req.params;

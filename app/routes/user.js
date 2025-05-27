@@ -1,7 +1,8 @@
-const express = require('express');
+import express from 'express';
+import userCtrl from '../controllers/userController.js';
+import auth from '../middleware/auth.js';
+
 const router = express.Router();
-const userCtrl = require('../controllers/userController');
-const auth = require('../middleware/auth');
 
 router.put('/:userId',auth, userCtrl.updateUser);
 router.put('/:userId/password',auth, userCtrl.updatePassword);
@@ -11,4 +12,4 @@ router.get('/',auth, userCtrl.getUsers);
 router.get('/roles/:roleName',auth, userCtrl.getUsersByRole);
 router.get('/roles/:roleName/:categoryName',auth, userCtrl.getUsersByRolesAndCategories);
 
-module.exports = router;
+export default router;

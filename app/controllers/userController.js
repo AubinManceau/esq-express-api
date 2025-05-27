@@ -1,12 +1,8 @@
-const User = require('../models/Users');
-const Role = require('../models/Roles');
-const Category = require('../models/Categories');
-const UserRoleCategory = require('../models/UserRolesCategories');
-const bcrypt = require('bcrypt');
-const TrainingUserStatus = require('../models/TrainingUsersStatus');
-require('dotenv').config();
+import models from '../models/index.js';
+import bcrypt from 'bcrypt';
+import 'dotenv/config';
 
-exports.updateUser = async (req, res, next) => {
+export const updateUser = async (req, res, next) => {
     try{
         const userId = req.params.userId;
         const {email, firstName, lastName, roleName, categoryName } = req.body;
@@ -15,31 +11,31 @@ exports.updateUser = async (req, res, next) => {
             return res.status(400).json({ error: 'Email, prénom et nom sont requis.' });
         }
 
-        const user = await User.findByPk(userId);
+        const user = await models.Users.findByPk(userId);
         if (!user || !user.isActive) {
             return res.status(404).json({ error: 'Utilisateur non trouvé.' });
         }
 
         if (roleName && roleName.length > 0) {
-            await UserRoleCategory.destroy({ where: { userId: userId } });
+            await models.UserRolesCategories.destroy({ where: { userId: userId } });
             for (let i = 0; i < roleName.length; i++) {
                 const role = roleName[i];
                 const category = categoryName[i] || null;
             
-                const roleInstance = await Role.findOne({ where: { name: role } });
+                const roleInstance = await models.Roles.findOne({ where: { name: role } });
                 if (!roleInstance) {
                     return res.status(400).json({ error: `Le rôle '${role}' n'existe pas.` });
                 }
             
                 let categoryInstance = null;
                 if (category) {
-                    categoryInstance = await Category.findOne({ where: { name: category } });
+                    categoryInstance = await models.Categories.findOne({ where: { name: category } });
                     if (!categoryInstance) {
                         return res.status(400).json({ error: `La catégorie '${category}' n'existe pas.` });
                     }
                 }
             
-                await UserRoleCategory.create({
+                await models.UserRolesCategories.create({
                     userId: user.id,
                     roleId: roleInstance.id,
                     categoryId: categoryInstance ? categoryInstance.id : null
@@ -59,7 +55,7 @@ exports.updateUser = async (req, res, next) => {
     }  
 };
 
-exports.updatePassword = async (req, res, next) => {
+export const updatePassword = async (req, res, next) => {
     try {
         const userId = req.params.userId;
         const { oldPassword, newPassword, confirmPassword } = req.body;
@@ -72,7 +68,7 @@ exports.updatePassword = async (req, res, next) => {
             return res.status(400).json({ error: 'Les mots de passe ne correspondent pas.' });
         }
 
-        const user = await User.findByPk(userId);
+        const user = await models.Users.findByPk(userId);
         if (!user || !user.isActive) {
             return res.status(404).json({ error: 'Utilisateur non trouvé.' });
         }
@@ -93,7 +89,7 @@ exports.updatePassword = async (req, res, next) => {
     }
 };
 
-exports.getUser = async (req, res, next) => {
+export const getUser = async (req, res, next) => {
     try {
         const userId = req.params.userId;
 
@@ -101,16 +97,16 @@ exports.getUser = async (req, res, next) => {
             return res.status(400).json({ error: 'Identifiant est requis.' });
         }
 
-        const user = await User.findByPk(userId);
+        const user = await models.Users.findByPk(userId);
         if (!user) {
             return res.status(404).json({ error: 'Utilisateur non trouvé.' });
         }
 
-        const userRoleCategory = await UserRoleCategory.findAll({
+        const userRoleCategory = await models.UserRolesCategories.findAll({
             where: { userId: userId },
             include: [
-                { model: Role },
-                { model: Category }
+                { model: models.Roles },
+                { model: models.Categories }
             ]
         });
 
@@ -121,17 +117,17 @@ exports.getUser = async (req, res, next) => {
     }
 };
 
-exports.getUsers = async (req, res, next) => {
+export const getUsers = async (req, res, next) => {
     try {
-        const users = await User.findAll();
+        const users = await models.Users.findAll();
 
         for (let i = 0; i < users.length; i++) {
             const user = users[i];
-            const userRoleCategory = await UserRoleCategory.findAll({
+            const userRoleCategory = await models.UserRolesCategories.findAll({
                 where: { userId: user.id },
                 include: [
-                    { model: Role },
-                    { model: Category }
+                    { model: models.Roles },
+                    { model: models.Categories }
                 ]
             });
             user.dataValues.userRoleCategory = userRoleCategory;
@@ -143,7 +139,7 @@ exports.getUsers = async (req, res, next) => {
     }
 };
 
-exports.deleteUser = async (req, res, next) => {
+export const deleteUser = async (req, res, next) => {
     try {
         const userId = req.params.userId;
 
@@ -151,13 +147,13 @@ exports.deleteUser = async (req, res, next) => {
             return res.status(400).json({ error: 'Identifiant est requis.' });
         }
 
-        const user = await User.findByPk(userId);
+        const user = await models.Users.findByPk(userId);
         if (!user) {
             return res.status(404).json({ error: 'Utilisateur non trouvé.' });
         }
 
-        await UserRoleCategory.destroy({ where: { userId: userId } });
-        await TrainingUserStatus.destroy({ where: { userId: userId } });
+        await models.UserRolesCategories.destroy({ where: { userId: userId } });
+        await models.TrainingUsersStatus.destroy({ where: { userId: userId } });
         await user.destroy();
 
         res.status(200).json({ message: 'Utilisateur supprimé avec succès!' });
@@ -167,7 +163,7 @@ exports.deleteUser = async (req, res, next) => {
     }
 };
 
-exports.getUsersByRole = async (req, res, next) => {
+export const getUsersByRole = async (req, res, next) => {
     try {
         const roleName = req.params.roleName;
 
@@ -175,16 +171,16 @@ exports.getUsersByRole = async (req, res, next) => {
             return res.status(400).json({ error: 'Nom du rôle est requis.' });
         }
 
-        const role = await Role.findOne({ where: { name: roleName } });
+        const role = await models.Roles.findOne({ where: { name: roleName } });
         if (!role) {
             return res.status(404).json({ error: 'Rôle non trouvé.' });
         }
 
-        const userRoleCategory = await UserRoleCategory.findAll({
+        const userRoleCategory = await models.UserRolesCategories.findAll({
             where: { roleId: role.id },
             include: [
-                { model: User },
-                { model: Category }
+                { model: models.Users },
+                { model: models.Categories }
             ]
         });
 
@@ -195,7 +191,7 @@ exports.getUsersByRole = async (req, res, next) => {
     }
 };
 
-exports.getUsersByRolesAndCategories = async (req, res, next) => {
+export const getUsersByRolesAndCategories = async (req, res, next) => {
     try {
         const roleName = req.params.roleName;
         const categoryName = req.params.categoryName;
@@ -204,20 +200,20 @@ exports.getUsersByRolesAndCategories = async (req, res, next) => {
             return res.status(400).json({ error: 'Nom du rôle et de la catégorie sont requis.' });
         }
 
-        const role = await Role.findOne({ where: { name: roleName } });
+        const role = await models.Roles.findOne({ where: { name: roleName } });
         if (!role) {
             return res.status(404).json({ error: 'Rôle non trouvé.' });
         }
 
-        const category = await Category.findOne({ where: { name: categoryName } });
+        const category = await models.Categories.findOne({ where: { name: categoryName } });
         if (!category) {
             return res.status(404).json({ error: 'Catégorie non trouvée.' });
         }
 
-        const userRoleCategory = await UserRoleCategory.findAll({
+        const userRoleCategory = await models.UserRolesCategories.findAll({
             where: { roleId: role.id, categoryId: category.id },
             include: [
-                { model: User }
+                { model: models.Users }
             ]
         });
 

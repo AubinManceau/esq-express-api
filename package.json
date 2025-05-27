@@ -2,6 +2,7 @@
   "name": "api",
   "version": "1.0.0",
   "main": "server.js",
+  "type": "module",
   "scripts": {
     "seed" : "docker-compose exec app npx sequelize-cli db:seed:all",
     "migrate" : "docker-compose exec app npx sequelize-cli db:migrate",

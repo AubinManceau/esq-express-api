@@ -1,8 +1,8 @@
-const http = require('http');
-const {app} = require('./app/app.js');
-const swaggerjsdoc = require("swagger-jsdoc");
-const swaggerUi = require("swagger-ui-express");
-require('dotenv').config();
+import http from 'http';
+import { app } from './app/app.js';
+import swaggerJSDoc from 'swagger-jsdoc';
+import swaggerUi from 'swagger-ui-express';
+import 'dotenv/config'
 
 const server = http.createServer(app);
 
@@ -67,10 +67,10 @@ const swaggerOptions = {
       },
     ],
   },
-  apis: ["./src/routes/*.js"],
+  apis: ["./app/routes/*.js"],
 };
 
-const swaggerDocs = swaggerjsdoc(swaggerOptions);
+const swaggerDocs = swaggerJSDoc(swaggerOptions);
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
 server.on('error', errorHandler);

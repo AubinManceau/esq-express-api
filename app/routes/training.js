@@ -1,7 +1,8 @@
-const express = require('express');
+import express from 'express';
+import trainingCtrl from '../controllers/trainingController.js';
+import auth from '../middleware/auth.js';
+
 const router = express.Router();
-const trainingCtrl = require('../controllers/trainingController');
-const auth = require('../middleware/auth');
 
 router.get('/', auth, trainingCtrl.getTrainings);
 router.get('/:id', auth, trainingCtrl.getTraining);
@@ -11,4 +12,4 @@ router.put('/:id', auth, trainingCtrl.updateTraining);
 router.patch('/:id/status', auth, trainingCtrl.updateTrainingUserStatus);
 router.delete('/:id', auth, trainingCtrl.deleteTraining);
 
-module.exports = router;
+export default router;

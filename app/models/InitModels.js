@@ -1,21 +1,19 @@
-const defineUsers = require('./Users');
-const defineRoles = require('./Roles');
-const defineCategories = require('./Categories');
-const defineUserRolesCategories = require('./UserRolesCategories');
-const defineTrainings = require('./Trainings');
-const defineTrainingUsersStatus = require('./TrainingUsersStatus');
-const definePrivateMessages = require('./PrivateMessages');
-const defineGroupMessages = require('./GroupMessages');
-const defineArticles = require('./Articles');
-const defineChatGroups = require('./ChatGroups');
-const defineUsersChatGroup = require('./UsersChatGroup');
-const defineUsersCoachTeam = require('./UsersCoachTeam');
-const defineTeams = require('./Teams');
-const defineUsersConvocation = require('./UsersConvocation');
-const defineConvocations = require('./Convocations');
-const defineArticleCategories = require('./ArticleCategories');
-const { sequelize } = require('../config/database');
-
+import defineUsers from './Users.js';
+import defineRoles from './Roles.js';
+import defineCategories from './Categories.js';
+import defineUserRolesCategories from './UserRolesCategories.js';
+import defineTrainings from './Trainings.js';
+import defineTrainingUsersStatus from './TrainingUsersStatus.js';
+import definePrivateMessages from './PrivateMessages.js';
+import defineGroupMessages from './GroupMessages.js';
+import defineArticles from './Articles.js';
+import defineChatGroups from './ChatGroups.js';
+import defineUsersChatGroup from './UsersChatGroup.js';
+import defineUsersCoachTeam from './UsersCoachTeam.js';
+import defineTeams from './Teams.js';
+import defineUsersConvocation from './UsersConvocation.js';
+import defineConvocations from './Convocations.js';
+import defineArticleCategories from './ArticleCategories.js';
 
 function initModels(sequelize) {
   const Users = defineUsers(sequelize);
@@ -36,11 +34,9 @@ function initModels(sequelize) {
   const ArticleCategories = defineArticleCategories(sequelize);
 
 
-  // Associations
   Users.hasMany(PrivateMessages, {foreignKey: 'senderId'});
   Users.hasMany(PrivateMessages, {foreignKey: 'receiverId'});
   Users.hasMany(GroupMessages, {foreignKey: 'senderId'});
-
 
   UsersCoachTeam.belongsTo(Users, { foreignKey: 'userCoachId' });
   Users.hasMany(UsersCoachTeam, { foreignKey: 'userCoachId' });
@@ -107,4 +103,4 @@ function initModels(sequelize) {
   };
 }
 
-module.exports = initModels;
+export default initModels;

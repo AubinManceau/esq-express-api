@@ -1,13 +1,12 @@
-const express = require('express');
-const { sequelize } = require('./config/database');
-const initModels = require('./models/InitModels');
-const userRoutes = require('./routes/user');
-const articleRoutes = require('./routes/article');
-const trainingRoutes = require('./routes/training');
-const authRoutes = require('./routes/auth');
+import express from 'express';
+import { sequelize } from './config/database.js';
+import initModels from './models/InitModels.js';
+import userRoutes from './routes/user.js';
+import articleRoutes from './routes/article.js';
+import trainingRoutes from './routes/training.js';
+import authRoutes from './routes/auth.js';
 
 const models = initModels(sequelize);
-
 const app = express();
 
 app.use((req, res, next) => {
@@ -23,7 +22,4 @@ app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/articles', articleRoutes);
 app.use('/api/v1/trainings', trainingRoutes);
 
-module.exports = {
-  app,
-  models,
-};
+export { app, models };

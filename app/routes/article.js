@@ -1,7 +1,8 @@
-const express = require('express');
+import express from 'express';
+import articleCtrl from '../controllers/articleController.js';
+import auth from '../middleware/auth.js';
+
 const router = express.Router();
-const articleCtrl = require('../controllers/articleController');
-// const auth = require('../middleware/auth');
 
 router.post('/create', articleCtrl.createArticle);
 router.patch('/:id', articleCtrl.updateArticle);
@@ -10,4 +11,4 @@ router.get('/', articleCtrl.getAllArticles);
 router.get('/:id', articleCtrl.getOneArticle);
 router.get('/category/:category', articleCtrl.getArticlesByCategory);
 
-module.exports = router;
+export default router;

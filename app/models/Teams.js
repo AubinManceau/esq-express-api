@@ -1,6 +1,6 @@
-const { DataTypes } = require('sequelize');
+import { DataTypes } from "sequelize";
 
-module.exports = (sequelize) => {
+export default (sequelize) => {
   return sequelize.define('Teams', {
     name: {
       type: DataTypes.STRING(50),

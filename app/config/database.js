@@ -1,5 +1,5 @@
-const { Sequelize } = require('sequelize');
-require('dotenv').config();
+import { Sequelize } from 'sequelize';
+import 'dotenv/config';
 
 const env = process.env.NODE_ENV || 'development';
 
@@ -41,4 +41,4 @@ const sequelize = new Sequelize(
   }
 );
 
-module.exports = { sequelize };
+export { sequelize };

@@ -1,8 +1,6 @@
-const Article = require('../models/Articles');
-const Category = require('../models/Categories');
-const { Op } = require('sequelize');
+import models from '../models/index.js';
 
-exports.createArticle = async (req, res, next) => {
+export const createArticle = async (req, res, next) => {
     try {
         const {categories, title, content, image, date, auther} = req.body;
 
@@ -10,7 +8,7 @@ exports.createArticle = async (req, res, next) => {
             return res.status(400).json({ message: 'Champs manquants !' });
         }
 
-        const allCategories = await Category.findAll();
+        const allCategories = await models.Categories.findAll();
         const categoriesNames = allCategories.map((category) => category.name);
 
         let finalCategories = categories;
@@ -20,7 +18,7 @@ exports.createArticle = async (req, res, next) => {
             finalCategories = [...new Set([ ...finalCategories])]
         }
 
-        const article = new Article({
+        const article = new models.Articles({
             categories: finalCategories,
             title,
             content,
@@ -37,7 +35,7 @@ exports.createArticle = async (req, res, next) => {
     }
 };
 
-exports.updateArticle = async (req, res, next) => {
+export const updateArticle = async (req, res, next) => {
     try {
         const id = req.params.id;
         const {categories, title, content, image, date, auther} = req.body;
@@ -56,7 +54,7 @@ exports.updateArticle = async (req, res, next) => {
             finalCategories = [...new Set([ ...finalCategories])]
         }
 
-        const article = await Article.findByPk(id);
+        const article = await models.Articles.findByPk(id);
         if (!article) {
             return res.status(404).json({ message: 'Article non trouvé !' });
         }
@@ -76,10 +74,10 @@ exports.updateArticle = async (req, res, next) => {
     }
 };
 
-exports.deleteArticle = async (req, res, next) => {
+export const deleteArticle = async (req, res, next) => {
     try {
         const id = req.params.id;
-        const article = await Article.findByPk(id);
+        const article = await models.Articles.findByPk(id);
         if (!article) {
             return res.status(404).json({ message: 'Article non trouvé !' });
         }
@@ -90,18 +88,18 @@ exports.deleteArticle = async (req, res, next) => {
     }
 };
 
-exports.getAllArticles = async (req, res, next) => {
+export const getAllArticles = async (req, res, next) => {
     try {
-        const articles = await Article.findAll();
+        const articles = await models.Articles.findAll();
         res.status(200).json(articles);
     } catch (error) {
         res.status(400).json({ error });
     }
 };
 
-exports.getOneArticle = async (req, res, next) => {
+export const getOneArticle = async (req, res, next) => {
     try {
-        const article = await Article.findByPk(req.params.id);
+        const article = await models.Articles.findByPk(req.params.id);
         if (!article) {
             return res.status(404).json({ message: 'Article non trouvé !' });
         }
@@ -111,11 +109,11 @@ exports.getOneArticle = async (req, res, next) => {
     }
 };
 
-exports.getArticlesByCategory = async (req, res, next) => {
+export const getArticlesByCategory = async (req, res, next) => {
     try {
         const category = req.params.category;
         
-        const categoryExists = await Category.findOne({ where: { name: category } });
+        const categoryExists = await models.Categories.findOne({ where: { name: category } });
         if (!categoryExists) {
             return res.status(404).json({ message: 'Catégorie non trouvée !' });
         }
