@@ -237,15 +237,15 @@ const getTraining = async (req, res) => {
             });
         }
 
-        const presentCount = await TrainingUserStatus.count({
+        const presentCount = await models.TrainingUsersStatus.count({
             where: { trainingId, status: 'present' },
         });
 
-        const absentCount = await TrainingUserStatus.count({
+        const absentCount = await models.TrainingUsersStatus.count({
             where: { trainingId, status: 'absent' },
         });
 
-        const notRespondedCount = await TrainingUserStatus.count({
+        const notRespondedCount = await models.TrainingUsersStatus.count({
             where: { trainingId, status: 'pending' },
         });
 
@@ -379,35 +379,6 @@ const updateTrainingUserStatus = async (req, res) => {
     }
 };
 
-const getTrainingStatus = async (req, res) => {
-    try {
-        const { trainingId, status } = req.params;
-
-        const allowedStatuses = ['present', 'absent', 'pending'];
-        if (!allowedStatuses.includes(status)) {
-            return res.status(400).json({
-                status: 'error',
-                message: 'Statut invalide. Les statuts autorisés sont: present, absent, pending.'
-            });
-        }
-
-        return res.status(200).json({
-            status: 'success',
-            message: "Statut récupéré avec succès.",
-            data: {
-                
-            }
-        });
-
-    } catch (error) {
-        console.error("Erreur lors de la récupération du statut:", error);
-        return res.status(500).json({
-            status: 'error',
-            message: "Erreur serveur lors de la récupération du statut."
-        });
-    }
-};
-
 export default {
     createTraining,
     updateTraining,
@@ -416,5 +387,4 @@ export default {
     getTraining,
     getUpcomingTrainingsByUserCategory,
     updateTrainingUserStatus,
-    getTrainingStatus
 };
