@@ -335,8 +335,7 @@ const getUpcomingTrainingsByUserCategory = async (req, res) => {
 const updateTrainingUserStatus = async (req, res) => {
     try {
         const userId = req.auth.userId;
-        const { trainingId } = req.params;
-        const { status } = req.body;
+        const { trainingId, status } = req.params;
 
         const allowedStatuses = ['present', 'absent', 'pending'];
 
@@ -380,6 +379,35 @@ const updateTrainingUserStatus = async (req, res) => {
     }
 };
 
+const getTrainingStatus = async (req, res) => {
+    try {
+        const { trainingId, status } = req.params;
+
+        const allowedStatuses = ['present', 'absent', 'pending'];
+        if (!allowedStatuses.includes(status)) {
+            return res.status(400).json({
+                status: 'error',
+                message: 'Statut invalide. Les statuts autorisés sont: present, absent, pending.'
+            });
+        }
+
+        return res.status(200).json({
+            status: 'success',
+            message: "Statut récupéré avec succès.",
+            data: {
+                
+            }
+        });
+
+    } catch (error) {
+        console.error("Erreur lors de la récupération du statut:", error);
+        return res.status(500).json({
+            status: 'error',
+            message: "Erreur serveur lors de la récupération du statut."
+        });
+    }
+};
+
 export default {
     createTraining,
     updateTraining,
@@ -387,5 +415,6 @@ export default {
     getTrainings,
     getTraining,
     getUpcomingTrainingsByUserCategory,
-    updateTrainingUserStatus
+    updateTrainingUserStatus,
+    getTrainingStatus
 };
