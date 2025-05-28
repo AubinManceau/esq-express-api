@@ -50,14 +50,9 @@ npm run migrate
 npm run seed
 ```
 
-🧪 Lancer les tests
-```bash
-# Pas encore développé
-```
-
 ---
 
 ## 📖 Liens utiles
 
-API - [http://localhost:3000/api/v1](http://localhost:3000/api/v1/api-docs) \
+API - [http://localhost:3000/api/v1/api-docs](http://localhost:3000/api/v1/api-docs) \
 PMA - [http://localhost:8080](http://localhost:8080)
