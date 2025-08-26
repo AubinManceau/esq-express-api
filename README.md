@@ -41,7 +41,7 @@ npm install
 #### 🐳 Lancer l’environnement avec Docker
 
 ```bash
-docker-compose up --build
+docker-compose up --build -d
 ```
 
 🛠️ Migrations et Seeders
@@ -54,5 +54,5 @@ npm run seed
 
 ## 📖 Liens utiles
 
-API - [http://localhost:3000/api/v1/api-docs](http://localhost:3000/api/v1/api-docs) \
+API - [http://localhost:3000/api-docs](http://localhost:3000/api-docs) \
 PMA - [http://localhost:8080](http://localhost:8080)

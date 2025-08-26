@@ -42,7 +42,7 @@ const errorHandler = error => {
 
 const swaggerOptions = {
   swaggerDefinition: {
-    openapi: "3.1.0",
+    openapi: "3.0.3",
     info: {
       title: "ESQ Manager API",
       description: "ESQ Manager API Information",
