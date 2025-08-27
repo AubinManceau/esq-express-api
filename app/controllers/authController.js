@@ -3,7 +3,6 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import nodemailer from 'nodemailer';
 import 'dotenv/config';
-import { use } from 'react';
 
 const mailSubject = "Bienvenue à l'ES Quelaines - Finalisez votre inscription";
 const mailContent = ({ firstName, lastName, token }) => `
@@ -211,7 +210,7 @@ const resendConfirmationEmail = async (req, res) => {
         if (!user || user.isActive) {
             return res.status(404).json({ 
                 status: 'error',
-                message: 'Utilisateur non trouvé ou inactif.'
+                message: 'Utilisateur non trouvé ou actif.'
             });
         }
 
