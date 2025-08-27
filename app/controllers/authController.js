@@ -177,12 +177,14 @@ const signup = async (req, res) => {
             status: 'success',
             message: 'Utilisateur créé avec succès!', 
             data: {
-                id: user.id,
-                firstName: user.firstName,
-                lastName: user.lastName,
-                email: user.email,
-                phone: user.phone,
-                createdAt: user.createdAt
+                user: {
+                    id: user.id,
+                    firstName: user.firstName,
+                    lastName: user.lastName,
+                    email: user.email,
+                    phone: user.phone,
+                },
+                token: token
             }
         });
 
@@ -248,6 +250,7 @@ const resendConfirmationEmail = async (req, res) => {
         return res.status(200).json({ 
             status: 'success',
             message: 'Nouveau token généré avec succès!',
+            data: { token: token }
         });
 
     } catch (error) {
@@ -580,6 +583,12 @@ const forgotPassword = async (req, res) => {
                 message: "Erreur lors de l'envoi de l'email." 
             });
         }
+
+        return res.status(200).json({ 
+            status: 'success',
+            message: 'Email de réinitialisation du mot de passe envoyé avec succès.',
+            data: { token: token }
+        });
 
     } catch (error) {
         return res.status(500).json({ 

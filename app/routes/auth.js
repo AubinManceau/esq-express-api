@@ -1,5 +1,6 @@
 import express from 'express';
 import authCtrl from '../controllers/authController.js';
+import auth from '../middleware/auth.js';
 
 /**
  * @swagger
@@ -334,7 +335,7 @@ router.post('/refresh-token', authCtrl.refreshAccessToken);
  *                   type: string
  *                   example: Erreur interne du serveur lors de la déconnexion.
  */
-router.post('/logout', authCtrl.logout);
+router.post('/logout', auth, authCtrl.logout);
 /**
  * @swagger
  * /login:
