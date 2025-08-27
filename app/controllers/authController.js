@@ -176,12 +176,12 @@ const signup = async (req, res) => {
 
 const definePassword = async (req, res) => {
     try {
-        const { token, password, confirmPassword } = req.body;
+        const { token, email, password, confirmPassword } = req.body;
 
-        if (!token || !password || !confirmPassword) {
+        if (!token || !email || !password || !confirmPassword) {
             return res.status(400).json({ 
                 status: 'error',
-                message: 'Token et mot de passe sont requis.' 
+                message: 'Token, email et mot de passe sont requis.' 
             });
         }
 
@@ -221,6 +221,13 @@ const definePassword = async (req, res) => {
             return res.status(404).json({ 
                 status: 'error',
                 message: 'Utilisateur non trouvé.' 
+            });
+        }
+
+        if (user.email !== email) {
+            return res.status(400).json({ 
+                status: 'error',
+                message: "L'email doit correspondre à celui utilisé lors de l'inscription." 
             });
         }
 
