@@ -34,6 +34,10 @@ export default (sequelize) => {
       defaultValue: false,
       allowNull: false
     },
+    refreshToken: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
   }, {
     tableName: 'users',
   });
