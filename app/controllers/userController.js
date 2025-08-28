@@ -2,234 +2,290 @@ import models from '../models/index.js';
 import bcrypt from 'bcryptjs';
 import 'dotenv/config';
 
-const updateUser = async (req, res, next) => {
-    try{
-        const userId = req.params.userId;
-        const {email, firstName, lastName, roleName, categoryName } = req.body;
-
-        if (!email || !firstName || !lastName) {
-            return res.status(400).json({ error: 'Email, prénom et nom sont requis.' });
-        }
+const updateUser = async (req, res) => {
+    try {
+        const userId = req.auth.userId;
+        const { email, firstName, lastName, phone } = req.body;
 
         const user = await models.Users.findByPk(userId);
         if (!user || !user.isActive) {
-            return res.status(404).json({ error: 'Utilisateur non trouvé.' });
+            return res.status(404).json({
+                status: 'error',
+                message: "Utilisateur non trouvé."
+            });
         }
 
-        if (roleName && roleName.length > 0) {
-            await models.UserRolesCategories.destroy({ where: { userId: userId } });
-            for (let i = 0; i < roleName.length; i++) {
-                const role = roleName[i];
-                const category = categoryName[i] || null;
-            
-                const roleInstance = await models.Roles.findOne({ where: { name: role } });
-                if (!roleInstance) {
-                    return res.status(400).json({ error: `Le rôle '${role}' n'existe pas.` });
+        if (email !== undefined) user.email = email;
+        if (firstName !== undefined) user.firstName = firstName;
+        if (lastName !== undefined) user.lastName = lastName;
+        if (phone !== undefined) user.phone = phone;
+
+        await user.save();
+
+        res.status(200).json({
+            status: 'success',
+            message: 'Utilisateur mis à jour avec succès!',
+            data: user
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            status: 'error',
+            message: 'Erreur interne du serveur lors de la mise à jour de l\'utilisateur.'
+        });
+    }
+};
+
+const updateUserForAdmin = async (req, res) => {
+    const t = await models.sequelize.transaction();
+
+    try {
+        const userId = req.params.userId;
+        const adminId = req.auth.userId;
+
+        if (!userId) {
+            await t.rollback();
+            return res.status(400).json({
+                status: 'error',
+                message: "L'identifiant de l'utilisateur est requis."
+            });
+        }
+        
+        if (userId == adminId) {
+            await t.rollback();
+            return res.status(400).json({
+                status: 'error',
+                message: "Un administrateur ne peut pas modifier son propre compte via cette route."
+            });
+        }
+        const { email, firstName, lastName, phone, isActive, rolesCategories } = req.body;
+
+        const user = await models.Users.findByPk(userId, { transaction: t });
+        if (!user) {
+            await t.rollback();
+            return res.status(404).json({
+                status: 'error',
+                message: "Utilisateur non trouvé."
+            });
+        }
+
+        if (email !== undefined) user.email = email;
+        if (firstName !== undefined) user.firstName = firstName;
+        if (lastName !== undefined) user.lastName = lastName;
+        if (phone !== undefined) user.phone = phone;
+        if (isActive !== undefined) {
+            user.isActive = isActive; 
+            user.refreshToken = "";
+        }
+
+        if (Array.isArray(rolesCategories)) {
+            await models.UserRolesCategories.destroy({ where: { userId }, transaction: t });
+
+            for (const { roleId, categoryId } of rolesCategories) {
+                const role = await models.Roles.findByPk(roleId, { transaction: t });
+                if (!role) throw new Error(`Le rôle '${roleId}' n'existe pas`);
+
+                let category = null;
+                if ([1, 2].includes(roleId)) {
+                    if (!categoryId) throw new Error(`La catégorie est requise pour le rôle '${role.name}'`);
+                    category = await models.Categories.findByPk(categoryId, { transaction: t });
+                    if (!category) throw new Error(`La catégorie '${categoryId}' n'existe pas`);
+
+                    const trainings = await models.Trainings.findAll({ where: { categoryId }, transaction: t });
+                    await Promise.all(trainings.map(training =>
+                        models.TrainingUsersStatus.create({ userId, trainingId: training.id }, { transaction: t })
+                    ));
                 }
-            
-                let categoryInstance = null;
-                if (category) {
-                    categoryInstance = await models.Categories.findOne({ where: { name: category } });
-                    if (!categoryInstance) {
-                        return res.status(400).json({ error: `La catégorie '${category}' n'existe pas.` });
-                    }
-                }
-            
+
                 await models.UserRolesCategories.create({
-                    userId: user.id,
-                    roleId: roleInstance.id,
-                    categoryId: categoryInstance ? categoryInstance.id : null
-                });
+                    userId,
+                    roleId,
+                    categoryId: category ? category.id : null
+                }, { transaction: t });
             }
         }
 
-        user.email = email;
-        user.first_name = firstName;
-        user.last_name = lastName;
-        await user.save();
+        await user.save({ transaction: t });
+        await t.commit();
 
-        res.status(200).json({ message: 'Utilisateur mis à jour avec succès!' });
+        res.status(200).json({
+            status: 'success',
+            message: 'Utilisateur mis à jour avec succès!',
+            data: user
+        });
 
     } catch (error) {
-    console.error('Erreur lors de la mise à jour de l\'utilisateur:', error);
-    }  
+        await t.rollback();
+        res.status(500).json({
+            status: 'error',
+            message: "Erreur interne du serveur lors de la mise à jour de l'utilisateur."
+        });
+    }
 };
 
-const updatePassword = async (req, res, next) => {
+const updatePassword = async (req, res) => {
     try {
-        const userId = req.params.userId;
+        const userId = req.auth.userId;
         const { oldPassword, newPassword, confirmPassword } = req.body;
 
         if (!oldPassword || !newPassword || !confirmPassword) {
-            return res.status(400).json({ error: 'Ancien mot de passe, nouveau mot de passe et confirmation sont requis.' });
+            return res.status(400).json({
+                status: 'error',
+                message: "Tous les champs sont requis."
+            });
         }
 
         if (newPassword !== confirmPassword) {
-            return res.status(400).json({ error: 'Les mots de passe ne correspondent pas.' });
+            return res.status(400).json({ 
+                status: 'error',
+                message: "Le nouveau mot de passe et la confirmation ne correspondent pas."
+            });
         }
 
         const user = await models.Users.findByPk(userId);
         if (!user || !user.isActive) {
-            return res.status(404).json({ error: 'Utilisateur non trouvé.' });
+            return res.status(404).json({ 
+                status: 'error',
+                message: "Utilisateur non trouvé."
+            });
         }
 
         const isPasswordValid = await bcrypt.compare(oldPassword, user.password);
         if (!isPasswordValid) {
-            return res.status(401).json({ message: 'Ancien mot de passe incorrect.' });
+            return res.status(401).json({ 
+                status: 'error',
+                message: "L'ancien mot de passe est incorrect."
+            });
         }
 
         const hashedPassword = await bcrypt.hash(newPassword, 10);
         user.password = hashedPassword;
         await user.save();
 
-        res.status(200).json({ message: 'Mot de passe mis à jour avec succès!' });
+        res.status(200).json({
+            status: 'success',
+            message: 'Mot de passe mis à jour avec succès!'
+        });
 
     } catch (error) {
-        console.error('Erreur lors de la mise à jour du mot de passe:', error);
+        res.status(500).json({
+            status: 'error',
+            message: "Erreur interne du serveur lors de la mise à jour du mot de passe."
+        });
     }
 };
 
-const getUser = async (req, res, next) => {
+const getUser = async (req, res) => {
     try {
         const userId = req.params.userId;
 
         if (!userId) {
-            return res.status(400).json({ error: 'Identifiant est requis.' });
+            return res.status(400).json({
+                status: 'error',
+                message: "L'identifiant de l'utilisateur est requis."
+            });
         }
 
-        const user = await models.Users.findByPk(userId);
-        if (!user) {
-            return res.status(404).json({ error: 'Utilisateur non trouvé.' });
-        }
-
-        const userRoleCategory = await models.UserRolesCategories.findAll({
-            where: { userId: userId },
+        const user = await models.Users.findByPk(userId, {
             include: [
-                { model: models.Roles },
-                { model: models.Categories }
+                {
+                    model: models.UserRolesCategories,
+                    include: [
+                        { model: models.Roles },
+                        { model: models.Categories }
+                    ]
+                }
+            ]
+        });
+        if (!user) {
+            return res.status(404).json({
+                status: 'error',
+                message: "Utilisateur non trouvé."
+            });
+        }
+
+        res.status(200).json({
+            status: 'success',
+            message: "Utilisateur récupéré avec succès.",
+            data: { 
+                user: user
+            }
+        });
+
+    } catch (error) {
+        return res.status(500).json({ 
+            status: 'error',
+            message: "Erreur interne du serveur lors de la récupération de l'utilisateur."
+        });
+    }
+};
+
+const getUsers = async (req, res) => {
+    try {
+        const users = await models.Users.findAll({
+            include: [
+                {
+                    model: models.UserRolesCategories,
+                    include: [{ model: models.Roles }, { model: models.Categories }]
+                }
             ]
         });
 
-        res.status(200).json({ user: user, userRoleCategory: userRoleCategory });
-
+        res.status(200).json({ 
+            status: 'success',
+            message: "Utilisateurs récupérés avec succès.",
+            data: users
+         });
     } catch (error) {
-        console.error('Erreur lors de la récupération de l\'utilisateur:', error);
+        return res.status(500).json({ 
+            status: 'error',
+            message: "Erreur interne du serveur lors de la récupération des utilisateurs."
+        });
     }
 };
 
-const getUsers = async (req, res, next) => {
-    try {
-        const users = await models.Users.findAll();
-
-        for (let i = 0; i < users.length; i++) {
-            const user = users[i];
-            const userRoleCategory = await models.UserRolesCategories.findAll({
-                where: { userId: user.id },
-                include: [
-                    { model: models.Roles },
-                    { model: models.Categories }
-                ]
-            });
-            user.dataValues.userRoleCategory = userRoleCategory;
-        }
-
-        res.status(200).json({ users: users });
-    } catch (error) {
-        console.error('Erreur lors de la récupération des utilisateurs:', error);
-    }
-};
-
-const deleteUser = async (req, res, next) => {
+const deleteUser = async (req, res) => {
     try {
         const userId = req.params.userId;
 
         if (!userId) {
-            return res.status(400).json({ error: 'Identifiant est requis.' });
+            return res.status(400).json({
+                status: 'error',
+                message: "L'identifiant de l'utilisateur est requis."
+            });
         }
 
         const user = await models.Users.findByPk(userId);
         if (!user) {
-            return res.status(404).json({ error: 'Utilisateur non trouvé.' });
+            return res.status(404).json({
+                status: 'error',
+                message: "Utilisateur non trouvé."
+            });
         }
 
         await models.UserRolesCategories.destroy({ where: { userId: userId } });
         await models.TrainingUsersStatus.destroy({ where: { userId: userId } });
+        // Ajouter les autres relations à supprimer si nécessaire
         await user.destroy();
 
-        res.status(200).json({ message: 'Utilisateur supprimé avec succès!' });
-
-    } catch (error) {
-        console.error('Erreur lors de la suppression de l\'utilisateur:', error);
-    }
-};
-
-const getUsersByRole = async (req, res, next) => {
-    try {
-        const roleName = req.params.roleName;
-
-        if (!roleName) {
-            return res.status(400).json({ error: 'Nom du rôle est requis.' });
-        }
-
-        const role = await models.Roles.findOne({ where: { name: roleName } });
-        if (!role) {
-            return res.status(404).json({ error: 'Rôle non trouvé.' });
-        }
-
-        const userRoleCategory = await models.UserRolesCategories.findAll({
-            where: { roleId: role.id },
-            include: [
-                { model: models.Users },
-                { model: models.Categories }
-            ]
+        res.status(200).json({
+            status: 'success',
+            message: "Utilisateur supprimé avec succès."
         });
 
-        res.status(200).json({ userRoleCategory: userRoleCategory });
-
     } catch (error) {
-        console.error('Erreur lors de la récupération des utilisateurs par rôle:', error);
-    }
-};
-
-const getUsersByRolesAndCategories = async (req, res, next) => {
-    try {
-        const roleName = req.params.roleName;
-        const categoryName = req.params.categoryName;
-
-        if (!roleName || !categoryName) {
-            return res.status(400).json({ error: 'Nom du rôle et de la catégorie sont requis.' });
-        }
-
-        const role = await models.Roles.findOne({ where: { name: roleName } });
-        if (!role) {
-            return res.status(404).json({ error: 'Rôle non trouvé.' });
-        }
-
-        const category = await models.Categories.findOne({ where: { name: categoryName } });
-        if (!category) {
-            return res.status(404).json({ error: 'Catégorie non trouvée.' });
-        }
-
-        const userRoleCategory = await models.UserRolesCategories.findAll({
-            where: { roleId: role.id, categoryId: category.id },
-            include: [
-                { model: models.Users }
-            ]
+        res.status(500).json({
+            status: 'error',
+            message: "Erreur interne du serveur lors de la suppression de l'utilisateur."
         });
-
-        res.status(200).json({ userRoleCategory: userRoleCategory });
-
-    } catch (error) {
-        console.error('Erreur lors de la récupération des utilisateurs par rôle et catégorie:', error);
     }
 };
 
 export default {
     updateUser,
+    updateUserForAdmin,
     updatePassword,
     getUser,
     getUsers,
-    deleteUser,
-    getUsersByRole,
-    getUsersByRolesAndCategories
+    deleteUser
 };

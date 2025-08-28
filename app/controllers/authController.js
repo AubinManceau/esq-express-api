@@ -58,88 +58,56 @@ const mailContentPassword = ({ firstName, lastName, token }) => `
 </div>`;
 
 const signup = async (req, res) => {
-    try {
-        const { firstName, lastName, email, phone, rolesId, categoriesId } = req.body;
+    const t = await models.sequelize.transaction();
 
-        if (!email || !Array.isArray(rolesId) || rolesId.length === 0 || !firstName || !lastName) {
+    try {
+        const { firstName, lastName, email, phone, rolesCategories } = req.body;
+
+        if (!email || !Array.isArray(rolesCategories) || rolesCategories.length === 0 || !firstName || !lastName) {
+            await t.rollback();
             return res.status(400).json({ 
                 status: 'error',
                 message: 'Nom, Prénom, Email et au moins un rôle sont requis.'
             });
         }
 
-        const existingUser = await models.Users.findOne({ where: { email } });
+        const existingUser = await models.Users.findOne({ where: { email }, transaction: t });
         if (existingUser) {
+            await t.rollback();
             return res.status(409).json({ 
                 status: 'error',
                 message: 'Un utilisateur avec cet email existe déjà.'
             });
         }
-        
+
         const user = await models.Users.create({
             firstName,
             lastName,
             email,
-            phone: phone || null,
-        });
+            phone: phone || null
+        }, { transaction: t });
 
-        const roleAssociations = [];
-        let categoryIndex = 0;
-        
-        for (let i = 0; i < rolesId.length; i++) {
-            const roleId = rolesId[i];
-            
-            const roleInstance = await models.Roles.findOne({ where: { id: roleId } });
-            if (!roleInstance) {
-                await models.Users.destroy({ where: { id: user.id } });
-                return res.status(400).json({ 
-                    status: 'error',
-                    message: `Le rôle correspondant à l'id '${roleId}' n'existe pas.` 
-                });
+        for (const { roleId, categoryId } of rolesCategories) {
+            const role = await models.Roles.findByPk(roleId, { transaction: t });
+            if (!role) throw new Error(`Le rôle '${roleId}' n'existe pas`);
+
+            let category = null;
+            if ([1, 2].includes(roleId)) {
+                if (!categoryId) throw new Error(`La catégorie est requise pour le rôle '${role.name}'`);
+                category = await models.Categories.findByPk(categoryId, { transaction: t });
+                if (!category) throw new Error(`La catégorie '${categoryId}' n'existe pas`);
+
+                const trainings = await models.Trainings.findAll({ where: { categoryId }, transaction: t });
+                await Promise.all(trainings.map(training =>
+                    models.TrainingUsersStatus.create({ userId: user.id, trainingId: training.id }, { transaction: t })
+                ));
             }
 
-            let categoryInstance = null;
-            
-            if ([1, 2].includes(parseInt(roleId))) {
-                const categoryId = categoriesId && categoryIndex < categoriesId.length ? categoriesId[categoryIndex] : null;
-                categoryIndex++;
-                
-                if (categoryId) {
-                    categoryInstance = await models.Categories.findOne({ where: { id: categoryId } });
-                    if (!categoryInstance) {
-                        await models.Users.destroy({ where: { id: user.id } });
-                        return res.status(400).json({ 
-                            status: 'error',
-                            message: `La catégorie correspondant à l'id '${categoryId}' n'existe pas.` 
-                        });
-                    }
-
-                    const trainings = await models.Trainings.findAll({
-                        where: { categoryId: categoryInstance.id }
-                    }); 
-                    
-                    await Promise.all(trainings.map(training =>
-                        models.TrainingUsersStatus.create({ 
-                            userId: user.id, 
-                            trainingId: training.id 
-                        })
-                    ));
-                } else {
-                    await models.Users.destroy({ where: { id: user.id } });
-                    return res.status(400).json({ 
-                        status: 'error',
-                        message: `La catégorie est requise pour le rôle '${roleInstance.name}'.` 
-                    });
-                }
-            }
-        
-            const association = await models.UserRolesCategories.create({
+            await models.UserRolesCategories.create({
                 userId: user.id,
-                roleId: roleInstance.id,
-                categoryId: categoryInstance ? categoryInstance.id : null
-            });
-            
-            roleAssociations.push(association);
+                roleId,
+                categoryId: category ? category.id : null
+            }, { transaction: t });
         }
 
         const token = jwt.sign(
@@ -163,14 +131,8 @@ const signup = async (req, res) => {
             html: mailContent({ firstName, lastName, token }),
         };
 
-        try {
-            await transporter.sendMail(mailOptions);
-        } catch (emailError) {
-            return res.status(500).json({ 
-                status: 'error',
-                message: "Erreur lors de l'envoi de l'email." 
-            });
-        }
+        transporter.sendMail(mailOptions)
+            .catch(emailError => console.error("Erreur lors de l'envoi de l'email :", emailError));
 
         return res.status(201).json({ 
             status: 'success',
@@ -181,16 +143,17 @@ const signup = async (req, res) => {
                     firstName: user.firstName,
                     lastName: user.lastName,
                     email: user.email,
-                    phone: user.phone,
+                    phone: user.phone
                 },
-                token: token
+                token
             }
         });
 
-    } catch (error) {      
-        return res.status(500).json({ 
+    } catch (error) {
+        await t.rollback();
+        return res.status(400).json({ 
             status: 'error',
-            message: "Erreur interne du serveur lors de la création de l'utilisateur."
+            message: error.message
         });
     }
 };

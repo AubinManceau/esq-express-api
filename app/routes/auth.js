@@ -1,12 +1,13 @@
 import express from 'express';
 import authCtrl from '../controllers/authController.js';
 import auth from '../middlewares/auth.js';
+import role from '../middlewares/role.js';
 
 /**
  * @swagger
  * tags:
- *   name: Utilisateurs
- *   description: Gestion des utilisateurs
+ *   name: Authentification
+ *   description: Gestion de l'authentification
  */
 const router = express.Router();
 
@@ -15,7 +16,7 @@ const router = express.Router();
  * /signup:
  *   post:
  *     summary: Création d'un utilisateur avec attribution de rôles et catégories
- *     tags: [Utilisateurs]
+ *     tags: [Authentification]
  *     requestBody:
  *       required: true
  *       content:
@@ -131,13 +132,13 @@ const router = express.Router();
  *                   type: string
  *                   example: Erreur interne du serveur lors de la création de l'utilisateur.
  */
-router.post('/signup', authCtrl.signup);
+router.post('/signup', auth, role([4]), authCtrl.signup);
 /**
  * @swagger
  * /resend-confirmation/{id}:
  *   post:
  *     summary: Réenvoi de l'email de confirmation pour un utilisateur inactif
- *     tags: [Utilisateurs]
+ *     tags: [Authentification]
  *     parameters:
  *       - in: path
  *         name: id
@@ -200,13 +201,13 @@ router.post('/signup', authCtrl.signup);
  *                   type: string
  *                   example: Erreur interne du serveur lors de la génération du token.
  */
-router.post('/resend-confirmation/:id', authCtrl.resendConfirmationEmail);
+router.post('/resend-confirmation/:id', auth, role([4]), authCtrl.resendConfirmationEmail);
 /**
  * @swagger
  * /refresh-token:
  *   post:
  *     summary: Rafraîchir le token d'accès avec un refresh token valide
- *     tags: [Utilisateurs]
+ *     tags: [Authentification]
  *     requestBody:
  *       required: true
  *       content:
@@ -291,7 +292,7 @@ router.post('/refresh-token', authCtrl.refreshAccessToken);
  * /logout:
  *   post:
  *     summary: Déconnexion d'un utilisateur (invalidation du refresh token)
- *     tags: [Utilisateurs]
+ *     tags: [Authentification]
  *     security:
  *       - bearerAuth: []
  *     responses:
@@ -341,7 +342,7 @@ router.post('/logout', auth, authCtrl.logout);
  * /login:
  *   post:
  *     summary: Connexion d'un utilisateur et génération des tokens d'accès et de refresh
- *     tags: [Utilisateurs]
+ *     tags: [Authentification]
  *     requestBody:
  *       required: true
  *       content:
@@ -466,7 +467,7 @@ router.post('/login', authCtrl.login);
  * /confirm:
  *   post:
  *     summary: Activation du compte et définition du mot de passe
- *     tags: [Utilisateurs]
+ *     tags: [Authentification]
  *     requestBody:
  *       required: true
  *       content:
@@ -581,7 +582,7 @@ router.post('/confirm', authCtrl.definePassword);
  * /forgot-password:
  *   post:
  *     summary: Envoi d'un email pour réinitialiser le mot de passe
- *     tags: [Utilisateurs]
+ *     tags: [Authentification]
  *     requestBody:
  *       required: true
  *       content:
@@ -656,7 +657,7 @@ router.post('/forgot-password', authCtrl.forgotPassword);
  * /reset-password:
  *   post:
  *     summary: Réinitialisation du mot de passe avec token
- *     tags: [Utilisateurs]
+ *     tags: [Authentification]
  *     requestBody:
  *       required: true
  *       content:
