@@ -1,3 +1,5 @@
+version: "3.8"
+
 services:
   app:
     build:
@@ -5,30 +7,22 @@ services:
       dockerfile: Dockerfile
       args:
         NODE_ENV: ${NODE_ENV}
-    container_name: api_esq
+    container_name: api_esq_prod
     ports:
       - "${PORT}:3000"
     env_file:
-      - .env
+      - .env.prod
     environment:
       - NODE_ENV=${NODE_ENV}
     depends_on:
       - db
-    volumes:
-      - .:/usr/src/app
-      - /usr/src/app/node_modules
-    command: >
-      sh -c "if [ \"$NODE_ENV\" = 'development' ];
-      then npx nodemon --legacy-watch server.js;
-      else node server.js;
-      fi"
 
   db:
     image: mariadb:10.11
-    container_name: db_esq
+    container_name: db_esq_prod
     restart: always
     env_file:
-      - .env
+      - .env.prod
     environment:
       MARIADB_ROOT_PASSWORD: ${DB_PASSWORD}
       MARIADB_DATABASE: ${DB_NAME}
@@ -39,15 +33,15 @@ services:
 
   phpmyadmin:
     image: phpmyadmin/phpmyadmin
-    container_name: pma_esq
+    container_name: pma_esq_prod
     restart: always
     ports:
       - "8080:80"
     env_file:
-      - .env
+      - .env.prod
     environment:
       PMA_ARBITRARY: 1
-      PMA_HOSTS: db,db_test
+      PMA_HOSTS: db
       PMA_USER: ${PMA_USER}
       PMA_PASSWORD: ${PMA_PASSWORD}
     depends_on:
