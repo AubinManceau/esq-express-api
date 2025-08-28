@@ -263,9 +263,6 @@ const deleteUser = async (req, res) => {
             });
         }
 
-        await models.UserRolesCategories.destroy({ where: { userId: userId } });
-        await models.TrainingUsersStatus.destroy({ where: { userId: userId } });
-        // Ajouter les autres relations à supprimer si nécessaire
         await user.destroy();
 
         res.status(200).json({

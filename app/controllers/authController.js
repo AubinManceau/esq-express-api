@@ -98,9 +98,15 @@ const signup = async (req, res) => {
                 if (!category) throw new Error(`La catégorie '${categoryId}' n'existe pas`);
 
                 const trainings = await models.Trainings.findAll({ where: { categoryId }, transaction: t });
-                await Promise.all(trainings.map(training =>
-                    models.TrainingUsersStatus.create({ userId: user.id, trainingId: training.id }, { transaction: t })
-                ));
+                await Promise.all(trainings.map(async training => {
+                    const exists = await models.TrainingUsersStatus.findOne({
+                        where: { userId: user.id, trainingId: training.id },
+                        transaction: t
+                    });
+                    if (!exists) {
+                        await models.TrainingUsersStatus.create({ userId: user.id, trainingId: training.id }, { transaction: t });
+                    }
+                }));
             }
 
             await models.UserRolesCategories.create({
@@ -133,6 +139,8 @@ const signup = async (req, res) => {
 
         transporter.sendMail(mailOptions)
             .catch(emailError => console.error("Erreur lors de l'envoi de l'email :", emailError));
+
+        await t.commit();
 
         return res.status(201).json({ 
             status: 'success',
