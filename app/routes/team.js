@@ -9,7 +9,7 @@ router.post('/create', auth, role([3, 4]), teamCtrl.createTeam);
 router.patch('/:id', auth, role([3, 4]), teamCtrl.updateTeam);
 router.delete('/:id', auth, role([3, 4]), teamCtrl.deleteTeam);
 router.get('/', auth, role([3, 4]), teamCtrl.getAllTeams);
-router.get('/:id', auth, role([2, 3, 4]), teamCtrl.getOneTeam);
-router.get('/category/:categoryId', auth, role([2, 3, 4]), teamCtrl.getTeamsByCategory);
+router.get('/:id', auth, teamCtrl.getOneTeam);
+router.get('/category/:categoryId', auth, teamCtrl.getTeamsByCategory);
 
 export default router;

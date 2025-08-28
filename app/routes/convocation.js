@@ -9,7 +9,7 @@ router.post('/create', auth, role([2, 4]), convocationCtrl.createConvocation);
 router.patch('/:id', auth, role([2, 4]), convocationCtrl.updateConvocation);
 router.delete('/:id', auth, role([2, 4]), convocationCtrl.deleteConvocation);
 router.get('/', auth, role([4]), convocationCtrl.getAllConvocations);
-router.get('/:id', auth, role([2, 4]), convocationCtrl.getOneConvocation);
-router.get('/category/:categoryId', auth, role([2, 4]), convocationCtrl.getConvocationsByCategory);
+router.get('/:id', auth, convocationCtrl.getOneConvocation);
+router.get('/category/:categoryId', auth, convocationCtrl.getConvocationsByCategory);
 
 export default router;
