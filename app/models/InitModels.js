@@ -39,6 +39,12 @@ function initModels(sequelize) {
   Users.hasMany(GroupMessages, {foreignKey: 'senderId'});
   Users.hasMany(Articles, {foreignKey: 'userAuthorId'});
 
+  Teams.belongsTo(Categories, { foreignKey: 'categoryId' });
+  Categories.hasMany(Teams, { foreignKey: 'categoryId' });
+
+  Teams.hasMany(Convocations, { foreignKey: 'teamId' });
+  Convocations.belongsTo(Teams, { foreignKey: 'teamId' });
+
   Trainings.belongsTo(Categories, { foreignKey: 'categoryId' });
   Categories.hasMany(Trainings, { foreignKey: 'categoryId' });
 

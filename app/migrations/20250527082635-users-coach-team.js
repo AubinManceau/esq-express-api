@@ -25,22 +25,6 @@ export default {
         onUpdate: 'CASCADE',
         onDelete: 'CASCADE'
       },
-      inviteFirstName: {
-        type: Sequelize.STRING(30),
-        allowNull: true
-      },
-      inviteLastName: {
-        type: Sequelize.STRING(50),
-        allowNull: true
-      },
-      inviteEmail: {
-        type: Sequelize.STRING,
-        allowNull: true
-      },
-      invitePhone: {
-        type: Sequelize.CHAR(10),
-        allowNull: true
-      },
       createdAt: {
         allowNull: false,
         type: Sequelize.DATE,
@@ -55,7 +39,6 @@ export default {
 
     await queryInterface.addIndex('users_coach_team', ['teamId']);
     await queryInterface.addIndex('users_coach_team', ['userCoachId']);
-    await queryInterface.addIndex('users_coach_team', ['inviteEmail']);
   },
 
   async down(queryInterface, Sequelize) {

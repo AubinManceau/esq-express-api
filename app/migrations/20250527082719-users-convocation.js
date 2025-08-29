@@ -25,14 +25,6 @@ export default {
         onUpdate: 'CASCADE',
         onDelete: 'CASCADE'
       },
-      inviteFirstName: {
-        type: Sequelize.STRING(30),
-        allowNull: true
-      },
-      inviteLastName: {
-        type: Sequelize.STRING(50),
-        allowNull: true
-      },
       createdAt: {
         allowNull: false,
         type: Sequelize.DATE,
