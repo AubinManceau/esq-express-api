@@ -23,7 +23,10 @@ const createTraining = async (req, res) => {
             });
         }
 
-        const training = await models.Trainings.create({  type, date, startTime, status, categoryId }, { transaction: t });
+        const training = await models.Trainings.create({  
+            type, date, startTime, status, categoryId},
+            { transaction: t }
+        );
 
         const users = await models.UserRolesCategories.findAll({
             where: { categoryId },
@@ -33,12 +36,7 @@ const createTraining = async (req, res) => {
 
         const usersIds = [...new Set(users.map(u => u.userId))];
 
-        await Promise.all(usersIds.map(userId =>
-            models.TrainingUsersStatus.create({ 
-                userId: userId, 
-                trainingId: training.id 
-            }, { transaction: t })
-        ));
+        await training.addUsers(usersIds, { transaction: t }); 
 
         await t.commit();
         return res.status(201).json({ 
@@ -101,11 +99,6 @@ const updateTraining = async (req, res) => {
 
             training.categoryId = categoryId;
 
-            await models.TrainingUsersStatus.destroy({
-                where: { trainingId: trainingId },
-                transaction: t
-            });
-
             const users = await models.UserRolesCategories.findAll({
                 where: { categoryId },
                 attributes: ['userId'],
@@ -113,13 +106,7 @@ const updateTraining = async (req, res) => {
             });
 
             const usersIds = [...new Set(users.map(u => u.userId))];
-
-            await Promise.all(usersIds.map(userId =>
-                models.TrainingUsersStatus.create({
-                    userId: userId,
-                    trainingId: trainingId
-                }, { transaction: t })
-            ));
+            await training.setUsers(usersIds, { transaction: t });
         }
 
         if (!category) {
@@ -283,7 +270,6 @@ const getTraining = async (req, res) => {
 const getTrainingsByUser = async (req, res) => {
     try {
         const userId = req.auth.userId;
-        const today = new Date().toISOString().split('T')[0];
 
         const userCategories = await models.UserRolesCategories.findAll({
             where: { userId },
@@ -302,7 +288,6 @@ const getTrainingsByUser = async (req, res) => {
         const trainings = await models.Trainings.findAll({
             where: {
                 categoryId: { [Op.in]: categoryIds },
-                date: { [Op.gte]: today }
             },
             order: [['date', 'ASC']],
             include: {
@@ -310,6 +295,13 @@ const getTrainingsByUser = async (req, res) => {
                 attributes: ['id', 'name']
             }
         });
+
+        if (!trainings || trainings.length === 0) {
+            return res.status(404).json({
+                status: "error",
+                message: "Aucun entrainement trouvé pour l'utilisateur."
+            });
+        }
 
         const results = await Promise.all(trainings.map(async training => {
             const [presentCount, absentCount, notRespondedCount] = await Promise.all([
@@ -360,7 +352,7 @@ const getTrainingsByUser = async (req, res) => {
 
         return res.status(200).json({
             status: 'success',
-            message: 'Entrainements à venir récupérés avec succès!',
+            message: 'Entrainements récupérés avec succès!',
             data: Object.values(groupedByCategory).map(item => item.category)
         });
 

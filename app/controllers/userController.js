@@ -88,13 +88,12 @@ const updateUserForAdmin = async (req, res) => {
                 let category = null;
                 if ([1, 2].includes(roleId)) {
                     if (!categoryId) throw new Error(`La catégorie est requise pour le rôle '${role.name}'`);
+
                     category = await models.Categories.findByPk(categoryId, { transaction: t });
                     if (!category) throw new Error(`La catégorie '${categoryId}' n'existe pas`);
 
                     const trainings = await models.Trainings.findAll({ where: { categoryId }, transaction: t });
-                    await Promise.all(trainings.map(training =>
-                        models.TrainingUsersStatus.create({ userId, trainingId: training.id }, { transaction: t })
-                    ));
+                    await user.setTrainings(trainings, { transaction: t });
                 }
 
                 await models.UserRolesCategories.create({
@@ -190,10 +189,7 @@ const getUser = async (req, res) => {
             include: [
                 {
                     model: models.UserRolesCategories,
-                    include: [
-                        { model: models.Roles },
-                        { model: models.Categories }
-                    ]
+                    attributes: ['roleId', 'categoryId']
                 }
             ]
         });
@@ -226,7 +222,7 @@ const getUsers = async (req, res) => {
             include: [
                 {
                     model: models.UserRolesCategories,
-                    include: [{ model: models.Roles }, { model: models.Categories }]
+                    attributes: ['roleId', 'categoryId']
                 }
             ]
         });

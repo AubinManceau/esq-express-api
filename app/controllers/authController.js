@@ -94,19 +94,12 @@ const signup = async (req, res) => {
             let category = null;
             if ([1, 2].includes(roleId)) {
                 if (!categoryId) throw new Error(`La catégorie est requise pour le rôle '${role.name}'`);
+
                 category = await models.Categories.findByPk(categoryId, { transaction: t });
                 if (!category) throw new Error(`La catégorie '${categoryId}' n'existe pas`);
 
                 const trainings = await models.Trainings.findAll({ where: { categoryId }, transaction: t });
-                await Promise.all(trainings.map(async training => {
-                    const exists = await models.TrainingUsersStatus.findOne({
-                        where: { userId: user.id, trainingId: training.id },
-                        transaction: t
-                    });
-                    if (!exists) {
-                        await models.TrainingUsersStatus.create({ userId: user.id, trainingId: training.id }, { transaction: t });
-                    }
-                }));
+                await user.addTrainings(trainings, { transaction: t });
             }
 
             await models.UserRolesCategories.create({
@@ -391,6 +384,7 @@ const login = async (req, res) => {
             }
         });
     } catch (error) {
+        console.error(error);
         return res.status(500).json({ 
             status: 'error',
             message: 'Erreur interne du serveur lors de la tentative de connexion.'

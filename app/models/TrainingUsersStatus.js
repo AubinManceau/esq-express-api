@@ -5,10 +5,12 @@ export default (sequelize) => {
         trainingId: {
             type: DataTypes.INTEGER,
             allowNull: false,
+            primaryKey: true,
         },
         userId: {
             type: DataTypes.INTEGER,
             allowNull: false,
+            primaryKey: true,
         },
         status: {
             type: DataTypes.ENUM('pending', 'absent', 'present'),

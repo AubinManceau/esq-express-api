@@ -37,50 +37,35 @@ function initModels(sequelize) {
   Users.hasMany(PrivateMessages, {foreignKey: 'senderId'});
   Users.hasMany(PrivateMessages, {foreignKey: 'receiverId'});
   Users.hasMany(GroupMessages, {foreignKey: 'senderId'});
-
-  UsersCoachTeam.belongsTo(Users, { foreignKey: 'userCoachId' });
-  Users.hasMany(UsersCoachTeam, { foreignKey: 'userCoachId' });
-
-  UsersCoachTeam.belongsTo(Teams, { foreignKey: 'teamId' });
-  Teams.hasMany(UsersCoachTeam, { foreignKey: 'teamId' });
-
   Users.hasMany(Articles, {foreignKey: 'userAuthorId'});
-
-  UserRolesCategories.belongsTo(Users, { foreignKey: 'userId' });
-  Users.hasMany(UserRolesCategories, { foreignKey: 'userId' });
-
-  UserRolesCategories.belongsTo(Categories, { foreignKey: 'categoryId' });
-  Categories.hasMany(UserRolesCategories, { foreignKey: 'categoryId' });
 
   Trainings.belongsTo(Categories, { foreignKey: 'categoryId' });
   Categories.hasMany(Trainings, { foreignKey: 'categoryId' });
 
-  TrainingUsersStatus.belongsTo(Users, { foreignKey: 'userId' });
-  Users.hasMany(TrainingUsersStatus, { foreignKey: 'userId' })
-
-  TrainingUsersStatus.belongsTo(Trainings, { foreignKey: 'trainingId' });
-  Trainings.hasMany(TrainingUsersStatus, { foreignKey: 'trainingId' });
-
+  UserRolesCategories.belongsTo(Users, { foreignKey: 'userId' });
+  Users.hasMany(UserRolesCategories, { foreignKey: 'userId' });
+  
+  UserRolesCategories.belongsTo(Categories, { foreignKey: 'categoryId' });
+  Categories.hasMany(UserRolesCategories, { foreignKey: 'categoryId' });
+  
   UserRolesCategories.belongsTo(Roles, { foreignKey: 'roleId' });
   Roles.hasMany(UserRolesCategories, { foreignKey: 'roleId' });
+  
+  Users.belongsToMany(Teams, { through: UsersCoachTeam, foreignKey: 'userCoachId', otherKey: 'teamId' });
+  Teams.belongsToMany(Users, { through: UsersCoachTeam, foreignKey: 'teamId', otherKey: 'userCoachId' });
 
-  UsersChatGroup.belongsTo(Users, { foreignKey: 'userId' });
-  Users.hasMany(UsersChatGroup, { foreignKey: 'userId' });
+  Trainings.belongsToMany(Users, { through: TrainingUsersStatus, foreignKey: 'trainingId', otherKey: 'userId' });
+  Users.belongsToMany(Trainings, { through: TrainingUsersStatus, foreignKey: 'userId', otherKey: 'trainingId' });
 
-  UsersChatGroup.belongsTo(ChatGroups, { foreignKey: 'chatGroupId' });
-  ChatGroups.hasMany(UsersChatGroup, { foreignKey: 'chatGroupId' });
+  Users.belongsToMany(ChatGroups, { through: UsersChatGroup, foreignKey: 'userId', otherKey: 'chatGroupId' });
+  ChatGroups.belongsToMany(Users, { through: UsersChatGroup, foreignKey: 'chatGroupId', otherKey: 'userId' });
 
-  UsersConvocation.belongsTo(Users, { foreignKey: 'userId' });
-  Users.hasMany(UsersConvocation, { foreignKey: 'userId' });
+  Users.belongsToMany(Convocations, { through: UsersConvocation, foreignKey: 'userId', otherKey: 'convocationId' });
+  Convocations.belongsToMany(Users, { through: UsersConvocation, foreignKey: 'convocationId', otherKey: 'userId' });
 
-  UsersConvocation.belongsTo(Convocations, { foreignKey: 'convocationId' });
-  Convocations.hasMany(UsersConvocation, { foreignKey: 'convocationId' });
+  Articles.belongsToMany(Categories, { through: ArticleCategories, foreignKey: 'articleId', otherKey: 'categoryId' });
+  Categories.belongsToMany(Articles, { through: ArticleCategories, foreignKey: 'categoryId', otherKey: 'articleId' });
 
-  ArticleCategories.belongsTo(Articles, { foreignKey: 'articleId' });
-  Articles.hasMany(ArticleCategories, { foreignKey: 'articleId' });
-
-  ArticleCategories.belongsTo(Categories, { foreignKey: 'categoryId' });
-  Categories.hasMany(ArticleCategories, { foreignKey: 'categoryId' });
 
   return {
     sequelize,

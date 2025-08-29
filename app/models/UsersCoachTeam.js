@@ -5,10 +5,12 @@ export default (sequelize) => {
         teamId: {
             type: DataTypes.INTEGER,
             allowNull: false,
+            primaryKey: true,
         },
         userCoachId: {
             type: DataTypes.INTEGER,
             allowNull: false,
+            primaryKey: true,
         },
         inviteFirstName: {
             type: DataTypes.STRING(30),

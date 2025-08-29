@@ -1,138 +1,273 @@
 import models from '../models/index.js';
 
-const createArticle = async (req, res, next) => {
+const createArticle = async (req, res) => {
+    const t = await models.sequelize.transaction();
     try {
-        const {categories, title, content, image, date, auther} = req.body;
+        const userAuthorId = req.auth.userId;
+        const { categories = [], title, content, image } = req.body;
 
-        if (!title || !content || !date || !auther) {
-            return res.status(400).json({ message: 'Champs manquants !' });
+        if (!title || !content || categories.length === 0) {
+            await t.rollback();
+            return res.status(400).json({
+                status: 'error',
+                message: 'Champs manquants !'
+            });
         }
 
-        const allCategories = await models.Categories.findAll();
-        const categoriesNames = allCategories.map((category) => category.name);
+        const categoryRecords = await models.Categories.findAll({
+            where: { id: categories },
+            transaction: t
+        });
 
-        let finalCategories = categories;
-        if (categories === 'all') {
-            finalCategories = [...new Set([ ...categoriesNames])];
-        } else {
-            finalCategories = [...new Set([ ...finalCategories])]
+        if (categoryRecords.length !== categories.length) {
+            await t.rollback();
+            return res.status(400).json({
+                status: 'error',
+                message: 'Une ou plusieurs catégories sont invalides !'
+            });
         }
 
-        const article = new models.Articles({
-            categories: finalCategories,
+        const date = new Date();
+
+        const article = await models.Articles.create({
             title,
             content,
             image,
             date,
-            auther,
+            userAuthorId,
+        }, { transaction: t });
+
+        await article.setCategories(categories, { transaction: t });
+
+        await t.commit();
+        const ArticleCategories = await article.getCategories(
+            { attributes: ['id', 'name'], joinTableAttributes: [] }
+        );
+        return res.status(201).json({
+            status: 'success',
+            message: 'Article créé !',
+            data: {
+                article: article,
+                categories: ArticleCategories
+            }
         });
-
-        await article.save();
-
-        res.status(201).json({ message: 'Article créé !' });
     } catch (error) {
-        res.status(400).json({ message: 'Erreur' });
+        await t.rollback();
+        return res.status(500).json({
+            status: 'error',
+            error: "Erreur interne lors de la création de l'article"
+        });
     }
 };
 
-const updateArticle = async (req, res, next) => {
+const updateArticle = async (req, res) => {
+    const t = await models.sequelize.transaction();
     try {
         const id = req.params.id;
-        const {categories, title, content, image, date, auther} = req.body;
+        const { categories = [], title, content, image } = req.body;
 
-        if (!title || !content || !date || !auther) {
-            return res.status(400).json({ message: 'Champs manquants !' });
+        const article = await models.Articles.findByPk(id, { transaction: t });
+        if (!article) {
+            await t.rollback();
+            return res.status(404).json({
+                status: 'error',
+                message: 'Article non trouvé !'
+            });
         }
 
-        const allCategories = await Category.findAll();
-        const categoriesNames = allCategories.map((category) => category.name);
+        if (title !== undefined) article.title = title;
+        if (content !== undefined) article.content = content;
+        if (image !== undefined) article.image = image;
 
-        let finalCategories = categories;
-        if (categories.includes('all')) {
-            finalCategories = [...new Set([ ...categoriesNames])];
+        let updatedCategories = [];
+
+        if (categories.length > 0) {
+            const categoryRecords = await models.Categories.findAll({
+                where: { id: categories },
+                attributes: ['id', 'name'],
+                transaction: t
+            });
+
+            if (categoryRecords.length !== categories.length) {
+                await t.rollback();
+                return res.status(400).json({
+                    status: 'error',
+                    message: 'Une ou plusieurs catégories sont invalides !'
+                });
+            }
+
+            await article.setCategories(categories, { transaction: t });
+            updatedCategories = categoryRecords;
         } else {
-            finalCategories = [...new Set([ ...finalCategories])]
+            await t.rollback();
+            return res.status(400).json({
+                status: 'error',
+                message: 'Au moins une catégorie doit être fournie !'
+            });
         }
 
-        const article = await models.Articles.findByPk(id);
-        if (!article) {
-            return res.status(404).json({ message: 'Article non trouvé !' });
-        }
+        await article.save({ transaction: t });
+        await t.commit();
 
-        article.categories = finalCategories;
-        article.title = title;
-        article.content = content;
-        article.image = image;
-        article.date = date;
-        article.auther = auther;
-
-        await article.save();
-
-        res.status(200).json({ message: 'Article modifié !' });
+        res.status(200).json({
+            status: 'success',
+            message: 'Article modifié !',
+            data: {
+                article,
+                categories: updatedCategories
+            }
+        });
     } catch (error) {
-        res.status(400).json({ error });
+        await t.rollback();
+        res.status(500).json({
+            status: 'error',
+            error: "Erreur interne lors de la modification de l'article"
+        });
     }
 };
 
-const deleteArticle = async (req, res, next) => {
+const deleteArticle = async (req, res) => {
     try {
         const id = req.params.id;
         const article = await models.Articles.findByPk(id);
         if (!article) {
-            return res.status(404).json({ message: 'Article non trouvé !' });
+            return res.status(404).json({
+                status: 'error',
+                message: 'Article non trouvé !'
+            });
         }
         await article.destroy();
-        res.status(200).json({ message: 'Article supprimé !' });
+        res.status(200).json({
+            status: 'success',
+            message: 'Article supprimé !'
+        });
     } catch (error) {
-        res.status(400).json({ error });
+        res.status(500).json({
+            status: 'error',
+            error: "Erreur interne lors de la suppression de l'article"
+        });
     }
 };
 
-const getAllArticles = async (req, res, next) => {
+const getAllArticles = async (req, res) => {
     try {
-        const articles = await models.Articles.findAll();
-        res.status(200).json(articles);
+        const articles = await models.Articles.findAll({
+            include: [
+                {
+                    model: models.Categories,
+                    attributes: ['id', 'name'],
+                    through: { attributes: [] }
+                }
+            ]
+        });
+
+        if (articles.length === 0) {
+            return res.status(404).json({
+                status: 'error',
+                message: 'Aucun article trouvé !'
+            });
+        }
+
+        res.status(200).json({
+            status: 'success',
+            message: 'Articles récupérés avec succès !',
+            data: articles
+        });
     } catch (error) {
-        res.status(400).json({ error });
+        console.error(error);
+        res.status(500).json({
+            status: 'error',
+            error: "Erreur interne lors de la récupération des articles"
+        });
     }
 };
 
-const getOneArticle = async (req, res, next) => {
+const getOneArticle = async (req, res) => {
     try {
-        const article = await models.Articles.findByPk(req.params.id);
+        const id = req.params.id;
+        const article = await models.Articles.findByPk(id, {
+            include: [
+                {
+                    model: models.Categories,
+                    attributes: ['id', 'name'],
+                    through: { attributes: [] }
+                }
+            ]
+        });
+
         if (!article) {
-            return res.status(404).json({ message: 'Article non trouvé !' });
+            return res.status(404).json({
+                status: 'error',
+                message: 'Article non trouvé !'
+            });
         }
-        res.status(200).json(article);
+
+        res.status(200).json({
+            status: 'success',
+            message: 'Article récupéré avec succès !',
+            data: article
+        });
+
     } catch (error) {
-        res.status(400).json({ error });
+        res.status(500).json({
+            status: 'error',
+            error: "Erreur interne lors de la récupération de l'article"
+        });
     }
 };
 
-const getArticlesByCategory = async (req, res, next) => {
+const getArticlesByCategory = async (req, res) => {
     try {
-        const category = req.params.category;
-        
-        const categoryExists = await models.Categories.findOne({ where: { name: category } });
-        if (!categoryExists) {
-            return res.status(404).json({ message: 'Catégorie non trouvée !' });
+        const userRoles = req.auth.roles;
+
+        if (!userRoles || userRoles.length === 0) {
+            return res.status(403).json({
+                status: 'error',
+                message: 'Rôle non autorisé.',
+            });
+        }
+        const userCategories = userRoles
+            .map(role => role.categoryId)
+            .filter(categoryId => categoryId !== null && categoryId !== undefined);
+
+        if (userCategories.length === 0) {
+            return res.status(403).json({
+                status: 'error',
+                message: 'Aucune catégorie associée à vos rôles.',
+            });
         }
 
-        const articles = await sequelize.query(
-            `SELECT * FROM Articles WHERE json_each.value = ?`,
-            {
-                replacements: [category],
-                type: QueryTypes.SELECT,
-            }
-        );
+        const articles = await models.Articles.findAll({
+            include: [
+                {
+                    model: models.Categories,
+                    where: {
+                        id: userCategories
+                    },
+                    attributes: ['id', 'name'],
+                    through: { attributes: [] }
+                }
+            ]
+        });
 
-        if (!articles) {
-            return res.status(404).json({ message: 'Aucun article trouvé pour cette catégorie !' });
+        if (articles.length === 0) {
+            return res.status(404).json({
+                status: 'error',
+                message: 'Aucun article trouvé pour cette catégorie !'
+            });
         }
 
-        res.status(200).json(articles);
+        res.status(200).json({
+            status: 'success',
+            message: 'Articles récupérés avec succès !',
+            data: articles
+        });
     } catch (error) {
-        res.status(400).json({ error });
+        console.error(error);
+        res.status(500).json({
+            status: 'error',
+            message: 'Erreur lors de la récupération des articles par catégorie !',
+        });
     }
 };
 
