@@ -7,7 +7,7 @@
     "seed": "docker-compose exec app npx sequelize-cli db:seed:all",
     "migrate": "docker-compose exec app npx sequelize-cli db:migrate",
     "seed:undo": "docker-compose exec app npx sequelize-cli db:seed:undo:all",
-    "migrate:undo": "docker-compose exec app npx sequelize-cli db:migrateundo:all"
+    "migrate:undo": "docker-compose exec app npx sequelize-cli db:migrate:undo:all"
   },
   "author": "",
   "license": "ISC",

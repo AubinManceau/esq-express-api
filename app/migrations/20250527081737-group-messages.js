@@ -13,10 +13,6 @@ export default {
         type: Sequelize.TEXT,
         allowNull: false,
       },
-      sentAt: {
-        type: Sequelize.DATE,
-        allowNull: false,
-      },
       senderId: {
         type: Sequelize.INTEGER,
         allowNull: false,
@@ -51,8 +47,6 @@ export default {
 
     await queryInterface.addIndex('group_messages', ['chatGroupId']);
     await queryInterface.addIndex('group_messages', ['senderId']);
-    await queryInterface.addIndex('group_messages', ['sentAt']);
-    await queryInterface.addIndex('group_messages', ['chatGroupId', 'sentAt']);
   },
 
   async down(queryInterface, Sequelize) {
