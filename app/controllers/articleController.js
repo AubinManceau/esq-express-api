@@ -4,7 +4,7 @@ const createArticle = async (req, res) => {
     const t = await models.sequelize.transaction();
     try {
         const userAuthorId = req.auth.userId;
-        const { categories = [], title, content, image } = req.body;
+        const { categories = [], title, content } = req.body;
 
         if (!title || !content || categories.length === 0) {
             await t.rollback();
@@ -27,13 +27,9 @@ const createArticle = async (req, res) => {
             });
         }
 
-        const date = new Date();
-
         const article = await models.Articles.create({
             title,
             content,
-            image,
-            date,
             userAuthorId,
         }, { transaction: t });
 
@@ -64,7 +60,7 @@ const updateArticle = async (req, res) => {
     const t = await models.sequelize.transaction();
     try {
         const id = req.params.id;
-        const { categories = [], title, content, image } = req.body;
+        const { categories = [], title, content } = req.body;
 
         const article = await models.Articles.findByPk(id, { transaction: t });
         if (!article) {
@@ -77,7 +73,6 @@ const updateArticle = async (req, res) => {
 
         if (title !== undefined) article.title = title;
         if (content !== undefined) article.content = content;
-        if (image !== undefined) article.image = image;
 
         let updatedCategories = [];
 

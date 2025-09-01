@@ -14,15 +14,7 @@ export default {
         allowNull: false,
       },
       content: {
-        type: Sequelize.TEXT,
-        allowNull: false,
-      },
-      image: {
-        type: Sequelize.STRING,
-        allowNull: true,
-      },
-      date: {
-        type: Sequelize.DATE,
+        type: Sequelize.JSON,
         allowNull: false,
       },
       userAuthorId: {

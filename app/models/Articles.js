@@ -7,15 +7,7 @@ export default (sequelize) => {
       allowNull: false,
     },
     content: {
-      type: DataTypes.TEXT,
-      allowNull: false,
-    },
-    image: {
-      type: DataTypes.STRING,
-      allowNull: true,
-    },
-    date: {
-      type: DataTypes.DATE,
+      type: DataTypes.JSON,
       allowNull: false,
     },
     userAuthorId: {
