@@ -13,7 +13,6 @@ import defineUsersCoachTeam from './UsersCoachTeam.js';
 import defineTeams from './Teams.js';
 import defineUsersConvocation from './UsersConvocation.js';
 import defineConvocations from './Convocations.js';
-import defineArticleCategories from './ArticleCategories.js';
 
 function initModels(sequelize) {
   const Users = defineUsers(sequelize);
@@ -31,13 +30,6 @@ function initModels(sequelize) {
   const Teams = defineTeams(sequelize);
   const UsersConvocation = defineUsersConvocation(sequelize);
   const Convocations = defineConvocations(sequelize);
-  const ArticleCategories = defineArticleCategories(sequelize);
-
-
-  Users.hasMany(PrivateMessages, {foreignKey: 'senderId'});
-  Users.hasMany(PrivateMessages, {foreignKey: 'receiverId'});
-  Users.hasMany(GroupMessages, {foreignKey: 'senderId'});
-  Users.hasMany(Articles, {foreignKey: 'userAuthorId'});
 
   Teams.belongsTo(Categories, { foreignKey: 'categoryId' });
   Categories.hasMany(Teams, { foreignKey: 'categoryId' });
@@ -69,6 +61,26 @@ function initModels(sequelize) {
   Users.belongsToMany(Convocations, { through: UsersConvocation, foreignKey: 'userId', otherKey: 'convocationId' });
   Convocations.belongsToMany(Users, { through: UsersConvocation, foreignKey: 'convocationId', otherKey: 'userId' });
 
+  ChatGroups.belongsTo(Categories, { foreignKey: 'categoryId' });
+  Categories.hasMany(ChatGroups, { foreignKey: 'categoryId' });
+
+  ChatGroups.belongsTo(Roles, { foreignKey: 'roleId' });
+  Roles.hasMany(ChatGroups, { foreignKey: 'roleId' });
+
+  GroupMessages.belongsTo(Users, { foreignKey: 'senderId' });
+  Users.hasMany(GroupMessages, { foreignKey: 'senderId' });
+  
+  GroupMessages.belongsTo(ChatGroups, { foreignKey: 'chatGroupId' });
+  ChatGroups.hasMany(GroupMessages, { foreignKey: 'chatGroupId' });
+
+  Users.hasMany(PrivateMessages, { foreignKey: 'senderId' });
+  PrivateMessages.belongsTo(Users, { foreignKey: 'senderId' });
+
+  Users.hasMany(PrivateMessages, { foreignKey: 'receiverId' });
+  PrivateMessages.belongsTo(Users, { foreignKey: 'receiverId' });
+
+  Users.hasMany(Articles, { foreignKey: 'userAuthorId' });
+  Articles.belongsTo(Users, { foreignKey: 'userAuthorId' });
 
   return {
     sequelize,
@@ -81,7 +93,6 @@ function initModels(sequelize) {
     PrivateMessages,
     GroupMessages,
     Articles,
-    ArticleCategories,
     UsersChatGroup,
     ChatGroups,
     UsersCoachTeam,

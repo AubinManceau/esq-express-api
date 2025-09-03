@@ -8,6 +8,7 @@ import authRoutes from './routes/auth.js';
 import teamRoutes from './routes/team.js';
 import convocationRoutes from './routes/convocation.js';
 import privateMessageRoutes from './routes/privateMessage.js';
+import groupChatRoutes from './routes/groupChats.js';
 
 const models = initModels(sequelize);
 const app = express();
@@ -27,5 +28,6 @@ app.use('/api/v1/trainings', trainingRoutes);
 app.use('/api/v1/teams', teamRoutes);
 app.use('/api/v1/convocations', convocationRoutes);
 app.use('/api/v1/private-messages', privateMessageRoutes);
+app.use('/api/v1/group-chats', groupChatRoutes);
 
 export { app, models };

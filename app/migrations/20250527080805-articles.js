@@ -45,7 +45,6 @@ export default {
     });
 
     await queryInterface.addIndex('articles', ['userAuthorId']);
-    await queryInterface.addIndex('articles', ['date']);
   },
 
   async down(queryInterface, Sequelize) {

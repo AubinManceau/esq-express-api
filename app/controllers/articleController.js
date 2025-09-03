@@ -154,6 +154,5 @@ export default {
     updateArticle,
     deleteArticle,
     getAllArticles,
-    getOneArticle,
-    getArticlesByCategory
+    getOneArticle
 };
