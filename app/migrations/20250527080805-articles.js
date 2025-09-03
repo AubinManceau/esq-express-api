@@ -17,6 +17,11 @@ export default {
         type: Sequelize.JSON,
         allowNull: false,
       },
+      status: {
+        type: Sequelize.ENUM('draft', 'published', 'archived'),
+        allowNull: false,
+        defaultValue: 'draft',
+      },
       userAuthorId: {
         type: Sequelize.INTEGER,
         allowNull: true,

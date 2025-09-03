@@ -10,6 +10,10 @@ export default (sequelize) => {
       type: DataTypes.JSON,
       allowNull: false,
     },
+    status: {
+      type: DataTypes.ENUM('draft', 'published', 'archived'),
+      defaultValue: 'draft',
+    },
     userAuthorId: {
       type: DataTypes.INTEGER,
       allowNull: true,

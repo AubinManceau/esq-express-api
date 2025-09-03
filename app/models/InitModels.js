@@ -69,9 +69,6 @@ function initModels(sequelize) {
   Users.belongsToMany(Convocations, { through: UsersConvocation, foreignKey: 'userId', otherKey: 'convocationId' });
   Convocations.belongsToMany(Users, { through: UsersConvocation, foreignKey: 'convocationId', otherKey: 'userId' });
 
-  Articles.belongsToMany(Categories, { through: ArticleCategories, foreignKey: 'articleId', otherKey: 'categoryId' });
-  Categories.belongsToMany(Articles, { through: ArticleCategories, foreignKey: 'categoryId', otherKey: 'articleId' });
-
 
   return {
     sequelize,
