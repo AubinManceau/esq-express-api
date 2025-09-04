@@ -2,6 +2,7 @@ import express from 'express';
 import trainingCtrl from '../controllers/trainingController.js';
 import auth from '../middlewares/auth.js';
 import role from '../middlewares/role.js';
+import cacheMiddleware from '../middlewares/cache.js';
 
 /**
  * @swagger
@@ -96,7 +97,7 @@ const router = express.Router();
  *                   type: string
  *                   example: Erreur interne du serveur lors de la récupération des entrainements.
  */
-router.get('/user', auth, trainingCtrl.getTrainingsByUser);
+router.get('/user', auth, cacheMiddleware('trainings-user:', 120), trainingCtrl.getTrainingsByUser);
 /**
  * @swagger
  * /trainings/{id}:
@@ -255,7 +256,7 @@ router.get('/:id', auth, trainingCtrl.getTraining);
  *                   type: string
  *                   example: Erreur interne du serveur lors de la récupération des entrainements.
  */
-router.get('/', auth, role([4]), trainingCtrl.getTrainings);
+router.get('/', auth, cacheMiddleware('trainings:', 120), role([4]), trainingCtrl.getTrainings);
 /**
  * @swagger
  * /trainings:

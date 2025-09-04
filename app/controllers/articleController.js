@@ -1,4 +1,5 @@
 import models from '../models/index.js';
+import redis from '../config/redisClient.js';
 
 const createArticle = async (req, res) => {
     const t = await models.sequelize.transaction();
@@ -22,6 +23,7 @@ const createArticle = async (req, res) => {
         }, { transaction: t });
 
         await t.commit();
+        await redis.del('articles:');
         return res.status(201).json({
             status: 'success',
             message: 'Article créé !',
@@ -58,6 +60,7 @@ const updateArticle = async (req, res) => {
         if (status !== undefined) article.status = status;
 
         await article.save({ transaction: t });
+        await redis.del('articles:');
         await t.commit();
         res.status(200).json({
             status: 'success',
@@ -86,6 +89,7 @@ const deleteArticle = async (req, res) => {
             });
         }
         await article.destroy();
+        await redis.del('articles:');
         res.status(200).json({
             status: 'success',
             message: 'Article supprimé !'

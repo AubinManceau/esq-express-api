@@ -1,4 +1,5 @@
 import models from '../models/index.js';
+import redis from '../config/redisClient.js';
 
 const createGroupChat = async (req, res) => {
     const t = await models.sequelize.transaction();
@@ -73,6 +74,7 @@ const createGroupChat = async (req, res) => {
             await groupChat.addUsers(userIds, { transaction: t });
         }
 
+        await redis.del('groupChats:');
         await t.commit();
         return res.status(201).json({
             status: 'success',
@@ -155,6 +157,7 @@ const updateGroupChat = async (req, res) => {
         }
 
         await groupChat.setUsers(userIds, { transaction: t });
+        await redis.del('groupChats:');
         await t.commit();
 
         return res.status(200).json({
@@ -188,6 +191,7 @@ const deleteGroupChat = async (req, res) => {
         }
 
         await groupChat.destroy({ transaction: t });
+        await redis.del('groupChats:');
         await t.commit();
         return res.status(200).json({
             status: 'success',

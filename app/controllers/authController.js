@@ -2,7 +2,8 @@ import models from '../models/index.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import 'dotenv/config';
-import {sendVerificationEmail, sendPasswordResetEmail} from '../utils/mail.js';
+import sendVerificationEmail from '../utils/mail.js';
+import sendPasswordResetEmail from '../utils/mail.js';
 import redis from '../config/redisClient.js';
 
 const signup = async (req, res) => {

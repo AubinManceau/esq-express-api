@@ -531,7 +531,7 @@ router.delete('/:userId',auth, role([4]), userCtrl.deleteUser);
  *                   type: string
  *                   example: "Erreur interne du serveur lors de la récupération de l'utilisateur."
  */
-router.get('/:userId',auth, role([3, 4]), userCtrl.getUser);
+router.get('/:userId',auth, userCtrl.getUser);
 /**
  * @swagger
  * /users:
@@ -614,6 +614,6 @@ router.get('/:userId',auth, role([3, 4]), userCtrl.getUser);
  *                   type: string
  *                   example: Erreur interne du serveur lors de la récupération des utilisateurs.
  */
-router.get('/',auth, cacheMiddleware('users:', 120), role([3, 4]), userCtrl.getUsers);
+router.get('/',auth, cacheMiddleware('users:', 120), userCtrl.getUsers);
 
 export default router;
