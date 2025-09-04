@@ -328,19 +328,14 @@ const getTrainingsByUser = async (req, res) => {
             };
         }));
 
-        const groupedByCategory = {};
-        results.forEach(training => {
-            const categoryId = training.category.id;
-            if (!groupedByCategory[categoryId]) {
-                groupedByCategory[categoryId] = {
-                    category: {
-                        id: training.category.id,
-                        name: training.category.name,
-                        trainings: []
-                    }
-                };
+        const groupedByCategory = results.reduce((acc, training) => {
+            const { id, name } = training.category;
+
+            if (!acc[id]) {
+                acc[id] = { id, name, trainings: [] };
             }
-            groupedByCategory[categoryId].category.trainings.push({
+
+            acc[id].trainings.push({
                 id: training.id,
                 type: training.type,
                 date: training.date,
@@ -348,7 +343,9 @@ const getTrainingsByUser = async (req, res) => {
                 status: training.status,
                 responses: training.responses
             });
-        });
+
+            return acc;
+        }, {});
 
         return res.status(200).json({
             status: 'success',

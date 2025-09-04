@@ -1,6 +1,7 @@
 import models from '../models/index.js';
 import bcrypt from 'bcryptjs';
 import 'dotenv/config';
+import redis from '../config/redisClient.js';
 
 const updateUser = async (req, res) => {
     try {
@@ -21,6 +22,7 @@ const updateUser = async (req, res) => {
         if (phone !== undefined) user.phone = phone;
 
         await user.save();
+        await redis.del('users:');
 
         res.status(200).json({
             status: 'success',
@@ -105,6 +107,7 @@ const updateUserForAdmin = async (req, res) => {
         }
 
         await user.save({ transaction: t });
+        await redis.del('users:');
         await t.commit();
 
         res.status(200).json({
@@ -160,6 +163,7 @@ const updatePassword = async (req, res) => {
         const hashedPassword = await bcrypt.hash(newPassword, 10);
         user.password = hashedPassword;
         await user.save();
+        await redis.del('users:');
 
         res.status(200).json({
             status: 'success',
@@ -260,6 +264,7 @@ const deleteUser = async (req, res) => {
         }
 
         await user.destroy();
+        await redis.del('users:');
 
         res.status(200).json({
             status: 'success',

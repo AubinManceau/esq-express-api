@@ -76,13 +76,13 @@ const getAllPrivateConversations = async (req, res) => {
             order: [['createdAt', 'DESC']],
         });
 
-        const conversations = {};
-        messages.forEach(msg => {
+        const conversations = messages.reduce((acc, msg) => {
             const otherUserId = msg.senderId === userId ? msg.receiverId : msg.senderId;
-            if (!conversations[otherUserId]) {
-                conversations[otherUserId] = msg;
+            if (!acc[otherUserId]) {
+                acc[otherUserId] = msg;
             }
-        });
+            return acc;
+        }, {});
 
         return res.status(200).json({
             status: 'success',

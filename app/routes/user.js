@@ -2,6 +2,8 @@ import express from 'express';
 import userCtrl from '../controllers/userController.js';
 import auth from '../middlewares/auth.js';
 import role from '../middlewares/role.js';
+import cacheMiddleware from '../middlewares/cache.js';
+import { validateUpdateUser } from '../middlewares/validation.js';
 
 /**
  * @swagger
@@ -109,7 +111,7 @@ const router = express.Router();
  *                   type: string
  *                   example: Erreur interne du serveur lors de la mise à jour de l'utilisateur.
  */
-router.patch('/',auth, userCtrl.updateUser);
+router.patch('/',auth, validateUpdateUser, userCtrl.updateUser);
 /**
  * @swagger
  * /users/password:
@@ -612,6 +614,6 @@ router.get('/:userId',auth, role([3, 4]), userCtrl.getUser);
  *                   type: string
  *                   example: Erreur interne du serveur lors de la récupération des utilisateurs.
  */
-router.get('/',auth, role([3, 4]), userCtrl.getUsers);
+router.get('/',auth, cacheMiddleware('users:', 120), role([3, 4]), userCtrl.getUsers);
 
 export default router;

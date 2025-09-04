@@ -14,6 +14,7 @@ services:
       - NODE_ENV=${NODE_ENV}
     depends_on:
       - db
+      - redis
     volumes:
       - .:/usr/src/app
       - /usr/src/app/node_modules
@@ -53,5 +54,18 @@ services:
     depends_on:
       - db
 
+  redis:
+    image: redis:7-alpine
+    container_name: redis_esq
+    ports:
+      - "6379:6379"
+    env_file:
+      - .env
+    command: ["redis-server", "--appendonly", "yes", "--save", "60", "1000", "--requirepass", "${REDIS_PASSWORD}"]
+    volumes:
+      - redis_data:/data
+    restart: always
+
 volumes:
   db_data:
+  redis_data:
