@@ -7,16 +7,12 @@ export default (sequelize) => {
       allowNull: false,
     },
     content: {
-      type: DataTypes.TEXT,
+      type: DataTypes.JSON,
       allowNull: false,
     },
-    image: {
-      type: DataTypes.STRING,
-      allowNull: true,
-    },
-    date: {
-      type: DataTypes.DATE,
-      allowNull: false,
+    status: {
+      type: DataTypes.ENUM('draft', 'published', 'archived'),
+      defaultValue: 'draft',
     },
     userAuthorId: {
       type: DataTypes.INTEGER,

@@ -14,16 +14,13 @@ export default {
         allowNull: false,
       },
       content: {
-        type: Sequelize.TEXT,
+        type: Sequelize.JSON,
         allowNull: false,
       },
-      image: {
-        type: Sequelize.STRING,
-        allowNull: true,
-      },
-      date: {
-        type: Sequelize.DATE,
+      status: {
+        type: Sequelize.ENUM('draft', 'published', 'archived'),
         allowNull: false,
+        defaultValue: 'draft',
       },
       userAuthorId: {
         type: Sequelize.INTEGER,
@@ -48,7 +45,6 @@ export default {
     });
 
     await queryInterface.addIndex('articles', ['userAuthorId']);
-    await queryInterface.addIndex('articles', ['date']);
   },
 
   async down(queryInterface, Sequelize) {

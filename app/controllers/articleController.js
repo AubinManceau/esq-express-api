@@ -1,138 +1,155 @@
 import models from '../models/index.js';
+import redis from '../config/redisClient.js';
 
-const createArticle = async (req, res, next) => {
+const createArticle = async (req, res) => {
+    const t = await models.sequelize.transaction();
     try {
-        const {categories, title, content, image, date, auther} = req.body;
+        const userAuthorId = req.auth.userId;
+        const { title, content, status } = req.body;
 
-        if (!title || !content || !date || !auther) {
-            return res.status(400).json({ message: 'Champs manquants !' });
+        if (!title || !content || !status) {
+            await t.rollback();
+            return res.status(400).json({
+                status: 'error',
+                message: 'Champs manquants !'
+            });
         }
 
-        const allCategories = await models.Categories.findAll();
-        const categoriesNames = allCategories.map((category) => category.name);
-
-        let finalCategories = categories;
-        if (categories === 'all') {
-            finalCategories = [...new Set([ ...categoriesNames])];
-        } else {
-            finalCategories = [...new Set([ ...finalCategories])]
-        }
-
-        const article = new models.Articles({
-            categories: finalCategories,
+        const article = await models.Articles.create({
             title,
             content,
-            image,
-            date,
-            auther,
+            userAuthorId,
+            status
+        }, { transaction: t });
+
+        await t.commit();
+        await redis.del('articles:');
+        return res.status(201).json({
+            status: 'success',
+            message: 'Article créé !',
+            data: {
+                article: article
+            }
         });
-
-        await article.save();
-
-        res.status(201).json({ message: 'Article créé !' });
     } catch (error) {
-        res.status(400).json({ message: 'Erreur' });
+        await t.rollback();
+        return res.status(500).json({
+            status: 'error',
+            error: "Erreur interne lors de la création de l'article"
+        });
     }
 };
 
-const updateArticle = async (req, res, next) => {
+const updateArticle = async (req, res) => {
+    const t = await models.sequelize.transaction();
     try {
         const id = req.params.id;
-        const {categories, title, content, image, date, auther} = req.body;
+        const { title, content, status } = req.body;
 
-        if (!title || !content || !date || !auther) {
-            return res.status(400).json({ message: 'Champs manquants !' });
-        }
-
-        const allCategories = await Category.findAll();
-        const categoriesNames = allCategories.map((category) => category.name);
-
-        let finalCategories = categories;
-        if (categories.includes('all')) {
-            finalCategories = [...new Set([ ...categoriesNames])];
-        } else {
-            finalCategories = [...new Set([ ...finalCategories])]
-        }
-
-        const article = await models.Articles.findByPk(id);
+        const article = await models.Articles.findByPk(id, { transaction: t });
         if (!article) {
-            return res.status(404).json({ message: 'Article non trouvé !' });
+            await t.rollback();
+            return res.status(404).json({
+                status: 'error',
+                message: 'Article non trouvé !'
+            });
         }
 
-        article.categories = finalCategories;
-        article.title = title;
-        article.content = content;
-        article.image = image;
-        article.date = date;
-        article.auther = auther;
+        if (title !== undefined) article.title = title;
+        if (content !== undefined) article.content = content;
+        if (status !== undefined) article.status = status;
 
-        await article.save();
-
-        res.status(200).json({ message: 'Article modifié !' });
+        await article.save({ transaction: t });
+        await redis.del('articles:');
+        await t.commit();
+        res.status(200).json({
+            status: 'success',
+            message: 'Article modifié !',
+            data: {
+                article
+            }
+        });
     } catch (error) {
-        res.status(400).json({ error });
+        await t.rollback();
+        res.status(500).json({
+            status: 'error',
+            error: "Erreur interne lors de la modification de l'article"
+        });
     }
 };
 
-const deleteArticle = async (req, res, next) => {
+const deleteArticle = async (req, res) => {
     try {
         const id = req.params.id;
         const article = await models.Articles.findByPk(id);
         if (!article) {
-            return res.status(404).json({ message: 'Article non trouvé !' });
+            return res.status(404).json({
+                status: 'error',
+                message: 'Article non trouvé !'
+            });
         }
         await article.destroy();
-        res.status(200).json({ message: 'Article supprimé !' });
+        await redis.del('articles:');
+        res.status(200).json({
+            status: 'success',
+            message: 'Article supprimé !'
+        });
     } catch (error) {
-        res.status(400).json({ error });
+        res.status(500).json({
+            status: 'error',
+            error: "Erreur interne lors de la suppression de l'article"
+        });
     }
 };
 
-const getAllArticles = async (req, res, next) => {
+const getAllArticles = async (req, res) => {
     try {
         const articles = await models.Articles.findAll();
-        res.status(200).json(articles);
+
+        if (articles.length === 0) {
+            return res.status(404).json({
+                status: 'error',
+                message: 'Aucun article trouvé !'
+            });
+        }
+
+        res.status(200).json({
+            status: 'success',
+            message: 'Articles récupérés avec succès !',
+            data: articles
+        });
     } catch (error) {
-        res.status(400).json({ error });
+        console.error(error);
+        res.status(500).json({
+            status: 'error',
+            error: "Erreur interne lors de la récupération des articles"
+        });
     }
 };
 
-const getOneArticle = async (req, res, next) => {
+const getOneArticle = async (req, res) => {
     try {
-        const article = await models.Articles.findByPk(req.params.id);
+        const id = req.params.id;
+        const article = await models.Articles.findByPk(id);
+
         if (!article) {
-            return res.status(404).json({ message: 'Article non trouvé !' });
+            return res.status(404).json({
+                status: 'error',
+                message: 'Article non trouvé !'
+            });
         }
-        res.status(200).json(article);
+
+        res.status(200).json({
+            status: 'success',
+            message: 'Article récupéré avec succès !',
+            data: article
+        });
+
     } catch (error) {
-        res.status(400).json({ error });
-    }
-};
-
-const getArticlesByCategory = async (req, res, next) => {
-    try {
-        const category = req.params.category;
-        
-        const categoryExists = await models.Categories.findOne({ where: { name: category } });
-        if (!categoryExists) {
-            return res.status(404).json({ message: 'Catégorie non trouvée !' });
-        }
-
-        const articles = await sequelize.query(
-            `SELECT * FROM Articles WHERE json_each.value = ?`,
-            {
-                replacements: [category],
-                type: QueryTypes.SELECT,
-            }
-        );
-
-        if (!articles) {
-            return res.status(404).json({ message: 'Aucun article trouvé pour cette catégorie !' });
-        }
-
-        res.status(200).json(articles);
-    } catch (error) {
-        res.status(400).json({ error });
+        res.status(500).json({
+            status: 'error',
+            error: "Erreur interne lors de la récupération de l'article"
+        });
     }
 };
 
@@ -141,6 +158,5 @@ export default {
     updateArticle,
     deleteArticle,
     getAllArticles,
-    getOneArticle,
-    getArticlesByCategory
+    getOneArticle
 };

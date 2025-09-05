@@ -6,10 +6,6 @@ export default (sequelize) => {
       type: DataTypes.TEXT,
       allowNull: false,
     },
-    sentAt: {
-      type: DataTypes.DATE,
-      allowNull: false,
-    },
     senderId: {
       type: DataTypes.INTEGER,
       allowNull: false,

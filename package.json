@@ -7,15 +7,19 @@
     "seed": "docker-compose exec app npx sequelize-cli db:seed:all",
     "migrate": "docker-compose exec app npx sequelize-cli db:migrate",
     "seed:undo": "docker-compose exec app npx sequelize-cli db:seed:undo:all",
-    "migrate:undo": "docker-compose exec app npx sequelize-cli db:migrateundo:all"
+    "migrate:undo": "docker-compose exec app npx sequelize-cli db:migrate:undo:all"
   },
   "author": "",
   "license": "ISC",
   "description": "",
   "dependencies": {
     "bcryptjs": "^3.0.2",
+    "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.0",
+    "express-validator": "^7.2.1",
+    "helmet": "^8.1.0",
+    "ioredis": "^5.7.0",
     "jsonwebtoken": "^9.0.2",
     "mariadb": "^3.4.2",
     "nodemailer": "^6.9.16",
@@ -24,7 +28,7 @@
     "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
-    "sequelize-cli": "^6.6.3",
-    "nodemon": "^3.1.10"
+    "nodemon": "^3.1.10",
+    "sequelize-cli": "^6.6.3"
   }
 }

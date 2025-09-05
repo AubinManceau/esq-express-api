@@ -1,47 +1,47 @@
+import redis from '../config/redisClient.js';
 import models from '../models/index.js';
 import { Op } from 'sequelize';
 
 const createTraining = async (req, res) => {
+    const t = await models.sequelize.transaction();
     try {
         const { type, date, startTime, status, categoryId } = req.body;
+        
         if (!type || !date || !startTime || !categoryId) {
+            await t.rollback();
             return res.status(400).json({ 
                 status: 'error',
                 message: 'Type, Date, Heure et une catégorie sont requis.'
             });
         }
 
-        const category = await models.Categories.findByPk(categoryId);
+        const category = await models.Categories.findByPk(categoryId, { transaction: t });
         if (!category) {
+            await t.rollback();
             return res.status(404).json({ 
                 status: 'error',
                 message: 'Catégorie non trouvé.' 
             });
         }
 
-        const training = await models.Trainings.create({ 
-            type,
-            date,
-            startTime,
-            status,
-            categoryId
-        });
-        
-        const rolesId = [1, 2];
+        const training = await models.Trainings.create({  
+            type, date, startTime, status, categoryId},
+            { transaction: t }
+        );
+
         const users = await models.UserRolesCategories.findAll({
-            where: {
-                categoryId: categoryId,
-                roleId: { [Op.in]: rolesId }
-            }
+            where: { categoryId },
+            attributes: ['userId'],
+            transaction: t
         });
 
-        await Promise.all(users.map(user =>
-            models.TrainingUsersStatus.create({ 
-                userId: user.userId, 
-                trainingId: training.id 
-            })
-        ));
+        const usersIds = [...new Set(users.map(u => u.userId))];
 
+        await training.addUsers(usersIds, { transaction: t }); 
+        await redis.del('trainings:');
+        await redis.del('trainings-user:');
+
+        await t.commit();
         return res.status(201).json({ 
             status: 'success',
             message: 'Entrainement créé avec succès!', 
@@ -61,8 +61,7 @@ const createTraining = async (req, res) => {
         });
 
     } catch (error) {
-        console.error("Erreur lors de la création de l'entrainement:", error);
-        
+        await t.rollback();
         return res.status(500).json({ 
             status: 'error',
             message: "Erreur interne du serveur lors de la création de l'entrainement."
@@ -71,60 +70,56 @@ const createTraining = async (req, res) => {
 };
 
 const updateTraining = async (req, res) => {
+    const t = await models.sequelize.transaction();
     try {
         const { type, date, startTime, status, categoryId } = req.body;
         const trainingId = req.params.id;
 
-        const training = await models.Trainings.findByPk(trainingId);
+        const training = await models.Trainings.findByPk(trainingId, { transaction: t });
         if (!training) {
+            await t.rollback();
             return res.status(404).json({ 
                 status: 'error',
                 message: 'Entrainement non trouvé.' 
             });
         }
 
-        let category = null;
+        if (type !== undefined) training.type = type;
+        if (date !== undefined) training.date = date;
+        if (startTime !== undefined) training.startTime = startTime;
+        if (status !== undefined) training.status = status;
 
+        let category = null;
         if (categoryId && categoryId !== training.categoryId) {
-            const category = await models.Categories.findByPk(categoryId);
+            category = await models.Categories.findByPk(categoryId, { transaction: t });
             if (!category) {
+                await t.rollback();
                 return res.status(404).json({ 
                     status: 'error',
                     message: 'Catégorie non trouvé.' 
                 });
             }
 
-            await models.TrainingUsersStatus.destroy({
-                where: { trainingId: req.params.id }
-            });
+            training.categoryId = categoryId;
 
-            const rolesId = [1, 2];
             const users = await models.UserRolesCategories.findAll({
-                where: {
-                    categoryId: categoryId,
-                    roleId: { [Op.in]: rolesId }
-                }
+                where: { categoryId },
+                attributes: ['userId'],
+                transaction: t
             });
 
-            await Promise.all(users.map(user =>
-                models.TrainingUsersStatus.create({
-                    userId: user.userId,
-                    trainingId: req.params.id
-                })
-            ));
+            const usersIds = [...new Set(users.map(u => u.userId))];
+            await training.setUsers(usersIds, { transaction: t });
         }
 
-        await training.update({ 
-            type,
-            date,
-            startTime,
-            status,
-            categoryId
-        });
-
-        if (!category && training.categoryId) {
-            category = await models.Categories.findByPk(training.categoryId);
+        if (!category) {
+            category = await models.Categories.findByPk(training.categoryId, { transaction: t });
         }
+
+        await training.save({ transaction: t });
+        await redis.del('trainings:');
+        await redis.del('trainings-user:');
+        await t.commit();
 
         return res.status(200).json({ 
             status: 'success',
@@ -143,10 +138,8 @@ const updateTraining = async (req, res) => {
                 },
             }
         });
-
     } catch (error) {
-        console.error("Erreur lors de la modification de l'entrainement:", error);
-        
+        await t.rollback();
         return res.status(500).json({ 
             status: 'error',
             message: "Erreur interne du serveur lors de la modification de l'entrainement."
@@ -166,15 +159,15 @@ const deleteTraining = async (req, res) => {
             });
         }
 
+        await redis.del('trainings:');
+        await redis.del('trainings-user:');
         await training.destroy();
 
         return res.status(200).json({ 
             status: 'success',
             message: 'Entrainement supprimé avec succès!', 
         });
-    } catch (error) {
-        console.error("Erreur lors de la suppression de l'entrainement:", error);
-        
+    } catch (error) {      
         return res.status(500).json({ 
             status: 'error',
             message: "Erreur interne du serveur lors de la suppression de l'entrainement."
@@ -182,41 +175,52 @@ const deleteTraining = async (req, res) => {
     }
 };
 
-const getTrainings = async (res) => {
+const getTrainings = async (req, res) => {
     try {
         const trainings = await models.Trainings.findAll({
             include: {
                 model: models.Categories,
-                as: 'category',
                 attributes: ['id', 'name'],
             }
         });
 
-        return res.status(200).json({ 
-            status: 'success',
-            message: 'Entrainements récupérés avec succès!', 
-            data: trainings.map(training => ({
+        const results = await Promise.all(trainings.map(async training => {
+            const [presentCount, absentCount, notRespondedCount] = await Promise.all([
+                models.TrainingUsersStatus.count({ where: { trainingId: training.id, status: 'present' } }),
+                models.TrainingUsersStatus.count({ where: { trainingId: training.id, status: 'absent' } }),
+                models.TrainingUsersStatus.count({ where: { trainingId: training.id, status: 'pending' } }),
+            ]);
+
+            return {
                 id: training.id,
                 type: training.type,
                 date: training.date,
                 startTime: training.startTime,
                 status: training.status,
                 category: {
-                    id: training.category.id,
-                    name: training.category.name
+                    id: training.Category.id,
+                    name: training.Category.name
+                },
+                responses: {
+                    present: presentCount,
+                    pending: notRespondedCount,
+                    absent: absentCount
                 }
-            }))
+            };
+        }));
+
+        return res.status(200).json({ 
+            status: 'success',
+            message: 'Entrainements récupérés avec succès!', 
+            data: results
         });
     } catch (error) {
-        console.error("Erreur lors de la récupération des entrainements:", error);
-        
-        return res.status(500).json({ 
+        return res.status(500).json({
             status: 'error',
             message: "Erreur interne du serveur lors de la récupération des entrainements."
         });
     }
 };
-
 
 const getTraining = async (req, res) => {
     try {
@@ -225,7 +229,6 @@ const getTraining = async (req, res) => {
         const training = await models.Trainings.findByPk(trainingId, {
             include: {
                 model: models.Categories,
-                as: 'category',
                 attributes: ['id', 'name']
             }
         });
@@ -237,43 +240,33 @@ const getTraining = async (req, res) => {
             });
         }
 
-        const presentCount = await models.TrainingUsersStatus.count({
-            where: { trainingId, status: 'present' },
-        });
-
-        const absentCount = await models.TrainingUsersStatus.count({
-            where: { trainingId, status: 'absent' },
-        });
-
-        const notRespondedCount = await models.TrainingUsersStatus.count({
-            where: { trainingId, status: 'pending' },
-        });
+        const [presentCount, absentCount, notRespondedCount] = await Promise.all([
+            models.TrainingUsersStatus.count({ where: { trainingId: training.id, status: 'present' } }),
+            models.TrainingUsersStatus.count({ where: { trainingId: training.id, status: 'absent' } }),
+            models.TrainingUsersStatus.count({ where: { trainingId: training.id, status: 'pending' } }),
+        ]);
 
         return res.status(200).json({ 
             status: 'success',
-            message: 'Entrainement modifié avec succès!', 
+            message: 'Entrainement récupéré avec succès!', 
             data: {
-                training: {
-                    id: training.id,
-                    type: training.type,
-                    date: training.date,
-                    startTime: training.startTime,
-                    status: training.status,
-                    category : {
-                        id: training.category.id,
-                        name: training.category.name
-                    },
-                    responses : {
-                        present: presentCount,
-                        pending: notRespondedCount,
-                        absent: absentCount
-                    }
+                id: training.id,
+                type: training.type,
+                date: training.date,
+                startTime: training.startTime,
+                status: training.status,
+                category : {
+                    id: training.Category.id,
+                    name: training.Category.name
                 },
+                responses : {
+                    present: presentCount,
+                    pending: notRespondedCount,
+                    absent: absentCount
+                }
             }
         });
-    } catch (error) {
-        console.error("Erreur lors de la récupération de l'entrainement:", error);
-        
+    } catch (error) {       
         return res.status(500).json({ 
             status: 'error',
             message: "Erreur interne du serveur lors de la récupération de l'entrainement."
@@ -281,10 +274,9 @@ const getTraining = async (req, res) => {
     }
 };
 
-const getUpcomingTrainingsByUserCategory = async (req, res) => {
+const getTrainingsByUser = async (req, res) => {
     try {
         const userId = req.auth.userId;
-        const today = new Date().toISOString().split('T')[0];
 
         const userCategories = await models.UserRolesCategories.findAll({
             where: { userId },
@@ -298,33 +290,77 @@ const getUpcomingTrainingsByUserCategory = async (req, res) => {
             });
         }
 
-        const categoryIds = userCategories.map(uc => uc.categoryId);
+        const categoryIds = [...new Set(userCategories.map(uc => uc.categoryId))];
 
         const trainings = await models.Trainings.findAll({
             where: {
-                categoryId: {
-                    [Op.in]: categoryIds
-                },
-                date: {
-                    [Op.gte]: today
-                }
+                categoryId: { [Op.in]: categoryIds },
             },
             order: [['date', 'ASC']],
             include: {
                 model: models.Categories,
-                as: 'category',
                 attributes: ['id', 'name']
             }
         });
 
+        if (!trainings || trainings.length === 0) {
+            return res.status(404).json({
+                status: "error",
+                message: "Aucun entrainement trouvé pour l'utilisateur."
+            });
+        }
+
+        const results = await Promise.all(trainings.map(async training => {
+            const [presentCount, absentCount, notRespondedCount] = await Promise.all([
+                models.TrainingUsersStatus.count({ where: { trainingId: training.id, status: 'present' } }),
+                models.TrainingUsersStatus.count({ where: { trainingId: training.id, status: 'absent' } }),
+                models.TrainingUsersStatus.count({ where: { trainingId: training.id, status: 'pending' } }),
+            ]);
+
+            return {
+                id: training.id,
+                type: training.type,
+                date: training.date,
+                startTime: training.startTime,
+                status: training.status,
+                category: {
+                    id: training.Category.id,
+                    name: training.Category.name
+                },
+                responses: {
+                    present: presentCount,
+                    pending: notRespondedCount,
+                    absent: absentCount
+                }
+            };
+        }));
+
+        const groupedByCategory = results.reduce((acc, training) => {
+            const { id, name } = training.category;
+
+            if (!acc[id]) {
+                acc[id] = { id, name, trainings: [] };
+            }
+
+            acc[id].trainings.push({
+                id: training.id,
+                type: training.type,
+                date: training.date,
+                startTime: training.startTime,
+                status: training.status,
+                responses: training.responses
+            });
+
+            return acc;
+        }, {});
+
         return res.status(200).json({
             status: 'success',
-            message: 'Entrainements à venir récupérés avec succès!',
-            data: trainings
+            message: 'Entrainements récupérés avec succès!',
+            data: Object.values(groupedByCategory).map(item => item.category)
         });
 
     } catch (error) {
-        console.error("Erreur lors de la récupération des entrainements à venir:", error);
         return res.status(500).json({
             status: 'error',
             message: "Erreur interne du serveur lors de la récupération des entrainements."
@@ -334,8 +370,9 @@ const getUpcomingTrainingsByUserCategory = async (req, res) => {
 
 const updateTrainingUserStatus = async (req, res) => {
     try {
-        const userId = req.auth.userId;
-        const { trainingId, status } = req.params;
+        const userId = parseInt(req.auth.userId, 10);
+        const trainingId = parseInt(req.params.id, 10);
+        const status = req.params.status;
 
         const allowedStatuses = ['present', 'absent', 'pending'];
 
@@ -358,6 +395,8 @@ const updateTrainingUserStatus = async (req, res) => {
         }
 
         record.status = status;
+        await redis.del('trainings:');
+        await redis.del('trainings-user:');
         await record.save();
 
         return res.status(200).json({
@@ -371,7 +410,6 @@ const updateTrainingUserStatus = async (req, res) => {
         });
 
     } catch (error) {
-        console.error("Erreur lors de la mise à jour du statut de participation:", error);
         return res.status(500).json({
             status: 'error',
             message: "Erreur serveur lors de la mise à jour du statut."
@@ -385,6 +423,6 @@ export default {
     deleteTraining,
     getTrainings,
     getTraining,
-    getUpcomingTrainingsByUserCategory,
+    getTrainingsByUser,
     updateTrainingUserStatus,
 };

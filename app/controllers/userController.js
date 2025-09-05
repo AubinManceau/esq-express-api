@@ -1,6 +1,7 @@
 import models from '../models/index.js';
 import bcrypt from 'bcryptjs';
 import 'dotenv/config';
+import redis from '../config/redisClient.js';
 
 const updateUser = async (req, res) => {
     try {
@@ -21,6 +22,7 @@ const updateUser = async (req, res) => {
         if (phone !== undefined) user.phone = phone;
 
         await user.save();
+        await redis.del('users:');
 
         res.status(200).json({
             status: 'success',
@@ -88,13 +90,12 @@ const updateUserForAdmin = async (req, res) => {
                 let category = null;
                 if ([1, 2].includes(roleId)) {
                     if (!categoryId) throw new Error(`La catégorie est requise pour le rôle '${role.name}'`);
+
                     category = await models.Categories.findByPk(categoryId, { transaction: t });
                     if (!category) throw new Error(`La catégorie '${categoryId}' n'existe pas`);
 
                     const trainings = await models.Trainings.findAll({ where: { categoryId }, transaction: t });
-                    await Promise.all(trainings.map(training =>
-                        models.TrainingUsersStatus.create({ userId, trainingId: training.id }, { transaction: t })
-                    ));
+                    await user.setTrainings(trainings, { transaction: t });
                 }
 
                 await models.UserRolesCategories.create({
@@ -106,6 +107,7 @@ const updateUserForAdmin = async (req, res) => {
         }
 
         await user.save({ transaction: t });
+        await redis.del('users:');
         await t.commit();
 
         res.status(200).json({
@@ -161,6 +163,7 @@ const updatePassword = async (req, res) => {
         const hashedPassword = await bcrypt.hash(newPassword, 10);
         user.password = hashedPassword;
         await user.save();
+        await redis.del('users:');
 
         res.status(200).json({
             status: 'success',
@@ -190,10 +193,7 @@ const getUser = async (req, res) => {
             include: [
                 {
                     model: models.UserRolesCategories,
-                    include: [
-                        { model: models.Roles },
-                        { model: models.Categories }
-                    ]
+                    attributes: ['roleId', 'categoryId']
                 }
             ]
         });
@@ -226,7 +226,7 @@ const getUsers = async (req, res) => {
             include: [
                 {
                     model: models.UserRolesCategories,
-                    include: [{ model: models.Roles }, { model: models.Categories }]
+                    attributes: ['roleId', 'categoryId']
                 }
             ]
         });
@@ -263,10 +263,8 @@ const deleteUser = async (req, res) => {
             });
         }
 
-        await models.UserRolesCategories.destroy({ where: { userId: userId } });
-        await models.TrainingUsersStatus.destroy({ where: { userId: userId } });
-        // Ajouter les autres relations à supprimer si nécessaire
         await user.destroy();
+        await redis.del('users:');
 
         res.status(200).json({
             status: 'success',

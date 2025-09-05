@@ -3,15 +3,10 @@
 export default {
   async up(queryInterface, Sequelize) {
     await queryInterface.createTable('users_coach_team', {
-      id: {
-        allowNull: false,
-        autoIncrement: true,
-        primaryKey: true,
-        type: Sequelize.INTEGER
-      },
       teamId: {
         type: Sequelize.INTEGER,
         allowNull: false,
+        primaryKey: true,
         references: {
           model: 'teams',
           key: 'id'
@@ -22,28 +17,13 @@ export default {
       userCoachId: {
         type: Sequelize.INTEGER,
         allowNull: true,
+        primaryKey: true,
         references: {
           model: 'users',
           key: 'id'
         },
         onUpdate: 'CASCADE',
         onDelete: 'CASCADE'
-      },
-      inviteFirstName: {
-        type: Sequelize.STRING(30),
-        allowNull: true
-      },
-      inviteLastName: {
-        type: Sequelize.STRING(50),
-        allowNull: true
-      },
-      inviteEmail: {
-        type: Sequelize.STRING,
-        allowNull: true
-      },
-      invitePhone: {
-        type: Sequelize.CHAR(10),
-        allowNull: true
       },
       createdAt: {
         allowNull: false,
@@ -59,7 +39,6 @@ export default {
 
     await queryInterface.addIndex('users_coach_team', ['teamId']);
     await queryInterface.addIndex('users_coach_team', ['userCoachId']);
-    await queryInterface.addIndex('users_coach_team', ['inviteEmail']);
   },
 
   async down(queryInterface, Sequelize) {

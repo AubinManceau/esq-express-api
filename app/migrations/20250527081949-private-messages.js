@@ -13,10 +13,6 @@ export default {
         type: Sequelize.TEXT,
         allowNull: false,
       },
-      sentAt: {
-        type: Sequelize.DATE,
-        allowNull: false,
-      },
       senderId: {
         type: Sequelize.INTEGER,
         allowNull: false,
@@ -51,7 +47,6 @@ export default {
 
     await queryInterface.addIndex('private_messages', ['senderId']);
     await queryInterface.addIndex('private_messages', ['receiverId']);
-    await queryInterface.addIndex('private_messages', ['sentAt']);
     await queryInterface.addIndex('private_messages', ['senderId', 'receiverId']);
   },
 

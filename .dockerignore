@@ -3,3 +3,4 @@ app/tests/
 .gitignore
 .idea/
 README.md
+package-lock.json

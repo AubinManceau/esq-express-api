@@ -1,61 +1,10 @@
 import models from '../models/index.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import nodemailer from 'nodemailer';
 import 'dotenv/config';
-
-const mailSubject = "Bienvenue à l'ES Quelaines - Finalisez votre inscription";
-const mailContent = ({ firstName, lastName, token }) => `
-<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-    <h1 style="color: #333;">Bienvenue ${firstName} ${lastName} !</h1>
-    <p>Nous sommes ravis de vous accueillir à l'<strong>ESQ</strong>.</p>
-    <p>Pour finaliser votre inscription, veuillez suivre le lien ci-dessous. Ce lien est valide pendant <strong>48 heures</strong>.</p>
-    <div style="text-align: center; margin: 20px 0;">
-        <a href="https://monprojet.com/inscription?token=${token}" 
-            style="background-color: #0066cc; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
-            Complétez votre inscription
-        </a>
-    </div>
-    <p>Vous pouvez également télécharger notre application :</p>
-    <ul style="list-style-type: none; padding: 0;">
-        <li style="margin: 10px 0;">
-            <a href="https://www.apple.com/app-store/" target="_blank" style="color: #0066cc; text-decoration: none;">
-                📱 Télécharger depuis l'App Store
-            </a>
-        </li>
-        <li style="margin: 10px 0;">
-            <a href="https://play.google.com/store" target="_blank" style="color: #0066cc; text-decoration: none;">
-                🤖 Télécharger depuis le Play Store
-            </a>
-        </li>
-    </ul>
-    <p>Si vous avez des questions, n'hésitez pas à nous contacter à 
-        <a href="mailto:support@esq.com" style="color: #0066cc;">support@esq.com</a>.
-    </p>
-    <p style="margin-top: 30px;">
-        À très bientôt,<br>
-        <strong>Le bureau de l'ESQ</strong>
-    </p>
-</div>`;
-const mailContentPassword = ({ firstName, lastName, token }) => `
-<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-    <h1 style="color: #333;">Bonjour ${firstName} ${lastName} !</h1>
-    <p>Nous avons reçu une demande de réinitialisation de votre mot de passe. Si vous n'êtes pas à l'origine de cette demande, vous pouvez l'ignorer.</p>
-    <p>Pour réinitialiser votre mot de passe, veuillez suivre le lien ci-dessous. Ce lien est valide pendant <strong>1 heure</strong>.</p>
-    <div style="text-align: center; margin: 20px 0;">
-        <a href="https://monprojet.com/reset-password?token=${token}" 
-            style="background-color: #0066cc; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
-            Réinitialisez votre mot de passe
-        </a>
-    </div>
-    <p>Si vous avez des questions, n'hésitez pas à nous contacter à 
-        <a href="mailto:support@esq.com" style="color: #0066cc;">support@esq.com</a>.
-    </p>
-    <p style="margin-top: 30px;">
-        À très bientôt,<br>
-        <strong>Le bureau de l'ESQ</strong>
-    </p>
-</div>`;
+import sendVerificationEmail from '../utils/mail.js';
+import sendPasswordResetEmail from '../utils/mail.js';
+import redis from '../config/redisClient.js';
 
 const signup = async (req, res) => {
     const t = await models.sequelize.transaction();
@@ -63,6 +12,7 @@ const signup = async (req, res) => {
     try {
         const { firstName, lastName, email, phone, rolesCategories } = req.body;
 
+        // Validation des données
         if (!email || !Array.isArray(rolesCategories) || rolesCategories.length === 0 || !firstName || !lastName) {
             await t.rollback();
             return res.status(400).json({ 
@@ -71,6 +21,7 @@ const signup = async (req, res) => {
             });
         }
 
+        // Vérification de l'unicité de l'email
         const existingUser = await models.Users.findOne({ where: { email }, transaction: t });
         if (existingUser) {
             await t.rollback();
@@ -80,6 +31,7 @@ const signup = async (req, res) => {
             });
         }
 
+        // Création de l'utilisateur
         const user = await models.Users.create({
             firstName,
             lastName,
@@ -87,6 +39,7 @@ const signup = async (req, res) => {
             phone: phone || null
         }, { transaction: t });
 
+        // Attribution des rôles et catégories + training si nécessaire
         for (const { roleId, categoryId } of rolesCategories) {
             const role = await models.Roles.findByPk(roleId, { transaction: t });
             if (!role) throw new Error(`Le rôle '${roleId}' n'existe pas`);
@@ -94,13 +47,12 @@ const signup = async (req, res) => {
             let category = null;
             if ([1, 2].includes(roleId)) {
                 if (!categoryId) throw new Error(`La catégorie est requise pour le rôle '${role.name}'`);
+
                 category = await models.Categories.findByPk(categoryId, { transaction: t });
                 if (!category) throw new Error(`La catégorie '${categoryId}' n'existe pas`);
 
                 const trainings = await models.Trainings.findAll({ where: { categoryId }, transaction: t });
-                await Promise.all(trainings.map(training =>
-                    models.TrainingUsersStatus.create({ userId: user.id, trainingId: training.id }, { transaction: t })
-                ));
+                await user.addTrainings(trainings, { transaction: t });
             }
 
             await models.UserRolesCategories.create({
@@ -110,30 +62,18 @@ const signup = async (req, res) => {
             }, { transaction: t });
         }
 
+        // Génération du token d'activation
         const token = jwt.sign(
             { userId: user.id },
             process.env.SECRET_KEY_SIGNUP,
             { expiresIn: '48h' }
         );
 
-        const transporter = nodemailer.createTransport({
-            service: 'gmail',
-            auth: {
-                user: process.env.EMAIL_USER,
-                pass: process.env.EMAIL_PASS
-            }
-        });
+        // Envoi de l'email de vérification
+        await sendVerificationEmail(email, firstName, lastName, token);
 
-        const mailOptions = {
-            from: process.env.EMAIL_FROM,
-            to: email,
-            subject: mailSubject,
-            html: mailContent({ firstName, lastName, token }),
-        };
-
-        transporter.sendMail(mailOptions)
-            .catch(emailError => console.error("Erreur lors de l'envoi de l'email :", emailError));
-
+        await redis.del('users:');
+        await t.commit();
         return res.status(201).json({ 
             status: 'success',
             message: 'Utilisateur créé avec succès!', 
@@ -162,13 +102,7 @@ const resendConfirmationEmail = async (req, res) => {
     try {
         const userId = req.params.id;
 
-        if (!userId) {
-            return res.status(400).json({ 
-                status: 'error',
-                message: "L'ID de l'utilisateur est requis." 
-            });
-        }
-
+        // Validation de l'ID utilisateur
         const user = await models.Users.findByPk(userId);
         if (!user || user.isActive) {
             return res.status(404).json({ 
@@ -177,37 +111,16 @@ const resendConfirmationEmail = async (req, res) => {
             });
         }
 
-       const { firstName, lastName, email } = user;
-
+        // Génération d'un nouveau token d'activation
+        const { firstName, lastName, email } = user;
         const token = jwt.sign(
             { userId },
             process.env.SECRET_KEY_SIGNUP,
             { expiresIn: '48h' }
         );
-        
-        const transporter = nodemailer.createTransport({
-            service: 'gmail',
-            auth: {
-                user: process.env.EMAIL_USER,
-                pass: process.env.EMAIL_PASS
-            }
-        });
 
-        const mailOptions = {
-            from: process.env.EMAIL_FROM,
-            to: email,
-            subject: mailSubject,
-            html: mailContent({ firstName, lastName, token }),
-        };
-
-        try {
-            await transporter.sendMail(mailOptions);
-        } catch (emailError) {
-            return res.status(500).json({ 
-                status: 'error',
-                message: "Erreur lors de l'envoi de l'email." 
-            });
-        }
+        // Envoi de l'email de vérification
+        await sendVerificationEmail(email, firstName, lastName, token);
 
         return res.status(200).json({ 
             status: 'success',
@@ -227,6 +140,7 @@ const definePassword = async (req, res) => {
     try {
         const { token, email, password, confirmPassword } = req.body;
 
+        // Validation des données
         if (!token || !email || !password || !confirmPassword) {
             return res.status(400).json({ 
                 status: 'error',
@@ -234,6 +148,7 @@ const definePassword = async (req, res) => {
             });
         }
 
+        // Vérification de la correspondance des mots de passe
         if (password !== confirmPassword) {
             return res.status(400).json({ 
                 status: 'error',
@@ -241,14 +156,7 @@ const definePassword = async (req, res) => {
             });
         }
 
-        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-        if (!passwordRegex.test(password)) {
-            return res.status(400).json({ 
-                status: 'error',
-                message: 'Le mot de passe doit contenir au moins 8 caractères, une majuscule, une minuscule, un chiffre et un caractère spécial.' 
-            });
-        }
-
+        // Validation du token
         let decodedToken;
         try {
             decodedToken = jwt.verify(token, process.env.SECRET_KEY_SIGNUP);
@@ -265,6 +173,7 @@ const definePassword = async (req, res) => {
             });
         }
 
+        // Validation de l'utilisateur
         const user = await models.Users.findByPk(decodedToken.userId);
         if (!user) {
             return res.status(404).json({ 
@@ -273,6 +182,7 @@ const definePassword = async (req, res) => {
             });
         }
 
+        // Vérification de l'email
         if (user.email !== email) {
             return res.status(400).json({ 
                 status: 'error',
@@ -280,6 +190,7 @@ const definePassword = async (req, res) => {
             });
         }
 
+        // Vérification de l'activation du compte
         if (user.isActive) {
             return res.status(409).json({ 
                 status: 'error',
@@ -287,10 +198,12 @@ const definePassword = async (req, res) => {
             });
         }
 
+        // Hachage du mot de passe et activation du compte
         const hashedPassword = await bcrypt.hash(password, 10);
         user.password = hashedPassword;
         user.isActive = true;
         await user.save();
+        await redis.del('users:');
 
         return res.status(200).json({ 
             status: 'success',
@@ -308,6 +221,7 @@ const login = async (req, res) => {
     try {
         const { email, password } = req.body;
 
+        // Validation des données
         if (!email || !password) {
             return res.status(400).json({ 
                 status: 'error',
@@ -315,6 +229,7 @@ const login = async (req, res) => {
             });
         }
 
+        // Vérification de l'utilisateur
         const user = await models.Users.findOne({ 
             where: { email },
             include: [
@@ -328,6 +243,7 @@ const login = async (req, res) => {
             ]
         });
 
+        // Vérification du mot de passe et de l'activation du compte
         const isPasswordValid = await bcrypt.compare(password, user.password);
         if (!user || !user.isActive || !isPasswordValid) {
             return res.status(401).json({ 
@@ -336,6 +252,7 @@ const login = async (req, res) => {
             });
         }
 
+        // Préparation des données utilisateur pour la réponse
         const userData = {
             id: user.id,
             firstName: user.firstName,
@@ -350,6 +267,7 @@ const login = async (req, res) => {
             })) : []
         };
 
+        // Génération des tokens JWT et sauvegarde du refresh token
         const accessToken = jwt.sign(
             { 
                 userId: user.id,
@@ -383,6 +301,7 @@ const login = async (req, res) => {
             }
         });
     } catch (error) {
+        console.error(error);
         return res.status(500).json({ 
             status: 'error',
             message: 'Erreur interne du serveur lors de la tentative de connexion.'
@@ -394,10 +313,12 @@ const refreshAccessToken = async (req, res) => {
     try {
         const { refreshToken } = req.body;
 
+        // Validation du refresh token
         if (!refreshToken) {
             return res.status(401).json({ status: 'error', message: 'Refresh token manquant.' });
         }
 
+        // Vérification et décodage du refresh token
         let decodedToken;
         try {
             decodedToken = jwt.verify(refreshToken, process.env.SECRET_KEY_REFRESH_TOKEN);
@@ -405,6 +326,7 @@ const refreshAccessToken = async (req, res) => {
             return res.status(403).json({ status: 'error', message: 'Refresh token invalide ou expiré.' });
         }
 
+        // Récupération de l'utilisateur et vérification du refresh token en base
         const user = await models.Users.findByPk(decodedToken.userId, {
             include: [
                 {
@@ -417,10 +339,12 @@ const refreshAccessToken = async (req, res) => {
             ]
         });
 
+        // Vérification de l'utilisateur et du refresh token
         if (!user || user.refreshToken !== refreshToken) {
             return res.status(403).json({ status: 'error', message: 'Refresh token non valide en base.' });
         }
-
+        
+        // Génération de nouveaux tokens
         const roles = user.UserRolesCategories?.map(urc => ({
             roleId: urc.roleId,
             categoryId: urc.categoryId
@@ -464,13 +388,7 @@ const logout = async (req, res) => {
     try {
         const userId = req.auth.userId;
 
-        if (!userId) {
-            return res.status(400).json({ 
-                status: 'error',
-                message: "L'ID de l'utilisateur est requis pour la déconnexion." 
-            });
-        }
-
+        // Validation de l'utilisateur
         const user = await models.Users.findByPk(userId);
         if (!user || !user.isActive) {
             return res.status(404).json({ 
@@ -479,6 +397,7 @@ const logout = async (req, res) => {
             });
         }
 
+        // Suppression du refresh token en base
         user.refreshToken = null;
         await user.save();
 
@@ -499,6 +418,7 @@ const forgotPassword = async (req, res) => {
     try {
         const { email } = req.body;
 
+        // Validation de l'email
         if (!email) {
             return res.status(400).json({ 
                 status: 'error',
@@ -506,6 +426,7 @@ const forgotPassword = async (req, res) => {
             });
         }
 
+        // Vérification de l'utilisateur
         const user = await models.Users.findOne({ where: { email } });
         if (!user || !user.isActive) {
             return res.status(404).json({ 
@@ -514,37 +435,16 @@ const forgotPassword = async (req, res) => {
             });
         }
 
+        // Génération du token de réinitialisation
         const token = jwt.sign(
             { userId: user.id },
             process.env.SECRET_KEY_RESET_PASSWORD,
             { expiresIn: '1h' }
         );
 
+        // Envoi de l'email de réinitialisation
         const { firstName, lastName } = user;
-
-        const transporter = nodemailer.createTransport({
-            service: 'gmail',
-            auth: {
-                user: process.env.EMAIL_USER,
-                pass: process.env.EMAIL_PASS
-            }
-        });
-
-        const mailOptions = {
-            from: process.env.EMAIL_FROM,
-            to: email,
-            subject: mailSubject,
-            html: mailContentPassword({ firstName, lastName, token }),
-        };
-
-        try {
-            await transporter.sendMail(mailOptions);
-        } catch (emailError) {
-            return res.status(500).json({ 
-                status: 'error',
-                message: "Erreur lors de l'envoi de l'email." 
-            });
-        }
+        await sendPasswordResetEmail(email, firstName, lastName, token);
 
         return res.status(200).json({ 
             status: 'success',
@@ -564,6 +464,7 @@ const resetPassword = async (req, res) => {
     try {
         const { token, email, newPassword, confirmNewPassword } = req.body;
 
+        // Validation des données
         if (!token || !email || !newPassword || !confirmNewPassword) {
             return res.status(400).json({ 
                 status: 'error',
@@ -571,6 +472,7 @@ const resetPassword = async (req, res) => {
             });
         }
 
+        // Vérification de la correspondance des nouveaux mots de passe
         if (newPassword !== confirmNewPassword) {
             return res.status(400).json({ 
                 status: 'error',
@@ -578,14 +480,7 @@ const resetPassword = async (req, res) => {
             });
         }
 
-        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-        if (!passwordRegex.test(newPassword)) {
-            return res.status(400).json({ 
-                status: 'error',
-                message: 'Le mot de passe doit contenir au moins 8 caractères, une majuscule, une minuscule, un chiffre et un caractère spécial.' 
-            });
-        }
-
+        // Validation du token
         let decodedToken;
         try {
             decodedToken = jwt.verify(token, process.env.SECRET_KEY_RESET_PASSWORD);
@@ -596,6 +491,7 @@ const resetPassword = async (req, res) => {
             });
         }
 
+        // Validation de l'utilisateur
         const user = await models.Users.findByPk(decodedToken.userId);
         if (!user || !user.isActive) {
             return res.status(404).json({ 
@@ -604,6 +500,7 @@ const resetPassword = async (req, res) => {
             });
         }
 
+        // Vérification de l'email
         if (user.email !== email) {
             return res.status(400).json({ 
                 status: 'error',
@@ -611,9 +508,11 @@ const resetPassword = async (req, res) => {
             });
         }
 
+        // Hachage du nouveau mot de passe et mise à jour en base
         const hashedPassword = await bcrypt.hash(newPassword, 10);
         user.password = hashedPassword;
         await user.save();
+        await redis.del('users:');
 
         return res.status(200).json({ 
             status: 'success',

@@ -1,14 +1,15 @@
 import express from 'express';
 import articleCtrl from '../controllers/articleController.js';
 import auth from '../middlewares/auth.js';
+import role from '../middlewares/role.js';
+import cacheMiddleware from '../middlewares/cache.js';
 
 const router = express.Router();
 
-router.post('/create', articleCtrl.createArticle);
-router.patch('/:id', articleCtrl.updateArticle);
-router.delete('/:id', articleCtrl.deleteArticle);
-router.get('/', articleCtrl.getAllArticles);
-router.get('/:id', articleCtrl.getOneArticle);
-router.get('/category/:category', articleCtrl.getArticlesByCategory);
+router.post('/create', auth, role([3, 4]), articleCtrl.createArticle);
+router.patch('/:id', auth, role([3, 4]), articleCtrl.updateArticle);
+router.delete('/:id', auth, role([3, 4]), articleCtrl.deleteArticle);
+router.get('/:id', auth, articleCtrl.getOneArticle);
+router.get('/', auth, cacheMiddleware('articles:', 120), articleCtrl.getAllArticles);
 
 export default router;

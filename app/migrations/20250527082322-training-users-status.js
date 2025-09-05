@@ -3,15 +3,10 @@
 export default {
   async up(queryInterface, Sequelize) {
     await queryInterface.createTable('training_users_status', {
-      id: {
-        allowNull: false,
-        autoIncrement: true,
-        primaryKey: true,
-        type: Sequelize.INTEGER
-      },
       trainingId: {
         type: Sequelize.INTEGER,
         allowNull: false,
+        primaryKey: true,
         references: {
           model: 'trainings',
           key: 'id'
@@ -22,6 +17,7 @@ export default {
       userId: {
         type: Sequelize.INTEGER,
         allowNull: false,
+        primaryKey: true,
         references: {
           model: 'users',
           key: 'id'

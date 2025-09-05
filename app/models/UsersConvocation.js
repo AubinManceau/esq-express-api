@@ -5,19 +5,13 @@ export default (sequelize) => {
         convocationId: {
             type: DataTypes.INTEGER,
             allowNull: false,
+            primaryKey: true
         },
         userId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-        },
-        inviteFirstName: {
-            type: DataTypes.STRING(30),
-            allowNull: true,
-        },
-        inviteLastName: {
-            type: DataTypes.STRING(50),
-            allowNull: true,
-        },
+            primaryKey: true
+        }
     }, {
     tableName: 'users_convocation',
   });
