@@ -1,7 +1,7 @@
 import nodemailer from 'nodemailer';
 import 'dotenv/config';
 
-const sendVerificationEmail = async (email, firstName, lastName, token) => {
+export const sendVerificationEmail = async (email, firstName, lastName, token) => {
     const mailSubject = "Bienvenue à l'ES Quelaines - Finalisez votre inscription";
     const mailContent = ({ firstName, lastName, token }) => `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -59,7 +59,7 @@ const sendVerificationEmail = async (email, firstName, lastName, token) => {
     }
 }
 
-const sendPasswordResetEmail = async (email, firstName, lastName, token) => {
+export const sendPasswordResetEmail = async (email, firstName, lastName, token) => {
     const mailSubject = "Réinitialisation de votre mot de passe - ES Quelaines";
     const mailContent = ({ firstName, lastName, token }) => `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -103,8 +103,3 @@ const sendPasswordResetEmail = async (email, firstName, lastName, token) => {
         console.error("Erreur lors de l'envoi de l'email :", emailError);
     }
 }
-
-export default { 
-    sendVerificationEmail,
-    sendPasswordResetEmail
-};

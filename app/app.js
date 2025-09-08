@@ -17,9 +17,10 @@ const app = express();
 
 app.use(helmet());
 app.use(cors({
-  origin: ['*'],
+  origin: 'http://localhost:4000',
   methods: ['GET','POST','PUT','DELETE','PATCH','OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
 }));
 
 app.use(express.json());

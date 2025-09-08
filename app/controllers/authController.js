@@ -2,8 +2,7 @@ import models from '../models/index.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import 'dotenv/config';
-import sendVerificationEmail from '../utils/mail.js';
-import sendPasswordResetEmail from '../utils/mail.js';
+import {sendVerificationEmail, sendPasswordResetEmail} from '../utils/mail.js';
 import redis from '../config/redisClient.js';
 
 const signup = async (req, res) => {
@@ -70,7 +69,8 @@ const signup = async (req, res) => {
         );
 
         // Envoi de l'email de vérification
-        await sendVerificationEmail(email, firstName, lastName, token);
+        sendVerificationEmail(email, firstName, lastName, token)
+            .catch(err => console.error("Erreur email :", err));
 
         await redis.del('users:');
         await t.commit();
@@ -120,7 +120,8 @@ const resendConfirmationEmail = async (req, res) => {
         );
 
         // Envoi de l'email de vérification
-        await sendVerificationEmail(email, firstName, lastName, token);
+        sendVerificationEmail(email, firstName, lastName, token)
+            .catch(err => console.error("Erreur email :", err));
 
         return res.status(200).json({ 
             status: 'success',
@@ -243,9 +244,16 @@ const login = async (req, res) => {
             ]
         });
 
+        if (!user) {
+            return res.status(404).json({ 
+                status: 'error',
+                message: 'Identifiants incorrects ou compte non activé.' 
+            });
+        }
+
         // Vérification du mot de passe et de l'activation du compte
         const isPasswordValid = await bcrypt.compare(password, user.password);
-        if (!user || !user.isActive || !isPasswordValid) {
+        if (!user.isActive || !isPasswordValid) {
             return res.status(401).json({ 
                 status: 'error',
                 message: 'Identifiants incorrects ou compte non activé.' 
@@ -444,7 +452,8 @@ const forgotPassword = async (req, res) => {
 
         // Envoi de l'email de réinitialisation
         const { firstName, lastName } = user;
-        await sendPasswordResetEmail(email, firstName, lastName, token);
+        sendPasswordResetEmail(email, firstName, lastName, token)
+            .catch(err => console.error("Erreur email :", err));
 
         return res.status(200).json({ 
             status: 'success',
