@@ -2,6 +2,7 @@ import models from '../models/index.js';
 import bcrypt from 'bcryptjs';
 import 'dotenv/config';
 import redis from '../config/redisClient.js';
+import { Op } from 'sequelize';
 
 const updateUser = async (req, res) => {
     try {
@@ -222,14 +223,39 @@ const getUser = async (req, res) => {
 
 const getUsers = async (req, res) => {
     try {
+        let { _role, _category } = req.query;
+
+        if (_role && !Array.isArray(_role)) {
+            _role = [_role];
+        }
+        if (_category && !Array.isArray(_category)) {
+            _category = [_category];
+        }
+
+        const whereUserRolesCategories = {};
+        if (_role && _role.length > 0) {
+            whereUserRolesCategories.roleId = { [Op.in]: _role };
+        }
+        if (_category && _category.length > 0) {
+            whereUserRolesCategories.categoryId = { [Op.in]: _category };
+        }
+
         const users = await models.Users.findAll({
             include: [
                 {
                     model: models.UserRolesCategories,
-                    attributes: ['roleId', 'categoryId']
+                    attributes: ['roleId', 'categoryId'],
+                    where: Object.keys(whereUserRolesCategories).length > 0 ? whereUserRolesCategories : undefined
                 }
             ]
         });
+
+        if (users.length === 0) {
+            return res.status(404).json({ 
+                status: 'error',
+                message: "Aucun utilisateur trouvé."
+            });
+        }
 
         res.status(200).json({ 
             status: 'success',
