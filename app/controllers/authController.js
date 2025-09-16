@@ -299,15 +299,32 @@ const login = async (req, res) => {
             await user.save();
         }
 
-        return res.status(200).json({
-            status: 'success',
-            message: 'Connexion réussie',
-            data: {
-                user: userData,
-                token: accessToken,
-                refreshToken: refreshToken
-            }
-        });
+        if (req.headers['x-client-type'] === 'web') {
+            res.cookie('token', accessToken, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'strict',
+                maxAge: 15 * 60 * 1000 // 15 minutes
+            });
+            return res.status(200).json({
+                status: 'success',
+                message: 'Connexion réussie',
+                data: {
+                    user: userData,
+                    refreshToken: refreshToken
+                }
+            });
+        } else {
+            return res.status(200).json({
+                status: 'success',
+                message: 'Connexion réussie',
+                data: {
+                    user: userData,
+                    token: accessToken,
+                    refreshToken: refreshToken
+                }
+            });
+        }
     } catch (error) {
         console.error(error);
         return res.status(500).json({ 
