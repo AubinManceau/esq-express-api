@@ -44,7 +44,7 @@ const signup = async (req, res) => {
             if (!role) throw new Error(`Le rôle '${roleId}' n'existe pas`);
 
             let category = null;
-            if ([1, 2].includes(roleId)) {
+            if ([1, 2].includes(Number(roleId))) {
                 if (!categoryId) throw new Error(`La catégorie est requise pour le rôle '${role.name}'`);
 
                 category = await models.Categories.findByPk(categoryId, { transaction: t });
@@ -56,8 +56,8 @@ const signup = async (req, res) => {
 
             await models.UserRolesCategories.create({
                 userId: user.id,
-                roleId,
-                categoryId: category ? category.id : null
+                roleId: Number(roleId),
+                categoryId: categoryId ? Number(categoryId) : null
             }, { transaction: t });
         }
 
