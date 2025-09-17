@@ -19,7 +19,7 @@ app.use(helmet());
 app.use(cors({
   origin: 'http://localhost:4000',
   methods: ['GET','POST','PUT','DELETE','PATCH','OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-client-type'],
   credentials: true,
 }));
 

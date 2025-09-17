@@ -306,12 +306,18 @@ const login = async (req, res) => {
                 sameSite: 'strict',
                 maxAge: 15 * 60 * 1000 // 15 minutes
             });
+            res.cookie('refreshToken', refreshToken, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'strict',
+                maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+            });
+
             return res.status(200).json({
                 status: 'success',
                 message: 'Connexion réussie',
                 data: {
                     user: userData,
-                    refreshToken: refreshToken
                 }
             });
         } else {
@@ -392,15 +398,62 @@ const refreshAccessToken = async (req, res) => {
         user.refreshToken = newRefreshToken;
         await user.save();
 
-        return res.status(200).json({
-            status: 'success',
-            message: 'Nouveau token d\'accès généré avec succès.',
-            data: {
-                token: newAccessToken,
-                refreshToken: newRefreshToken,
-            }
-        });
+        if (req.headers['x-client-type'] === 'web') {
+            res.cookie('token', newAccessToken, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'strict',
+                maxAge: 15 * 60 * 1000 // 15 minutes
+            });
+            res.cookie('refreshToken', newRefreshToken, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'strict',
+                maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+            });
 
+            return res.status(200).json({
+                status: 'success',
+                message: 'Nouveau token d\'accès généré avec succès.',
+                data: {
+                    user: {
+                        id: user.id,
+                        firstName: user.firstName,
+                        lastName: user.lastName,
+                        email: user.email,
+                        phone: user.phone,
+                        roles: user.UserRolesCategories ? user.UserRolesCategories.map(urc => ({
+                            roleId: urc.roleId,
+                            roleName: urc.Role ? urc.Role.name : null,
+                            categoryId: urc.categoryId,
+                            categoryName: urc.Category ? urc.Category.name : null
+                        })) : []
+                    }
+                }
+            });
+        } else {
+            return res.status(200).json({
+                status: 'success',
+                message: 'Nouveau token d\'accès généré avec succès.',
+                data: {
+                    token: newAccessToken,
+                    refreshToken: newRefreshToken,
+                    user: {
+                        id: user.id,
+                        firstName: user.firstName,
+                        lastName: user.lastName,
+                        email: user.email,
+                        phone: user.phone,
+                        roles: user.UserRolesCategories ? user.UserRolesCategories.map(urc => ({
+                            roleId: urc.roleId,
+                            roleName: urc.Role ? urc.Role.name : null,
+                            categoryId: urc.categoryId,
+                            categoryName: urc.Category ? urc.Category.name : null
+                        })) : []
+                    }
+                }
+            });
+        }
     } catch (error) {
         return res.status(500).json({ 
             status: 'error',
