@@ -475,6 +475,17 @@ const logout = async (req, res) => {
             });
         }
 
+        res.clearCookie("token", {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "strict",
+        });
+        res.clearCookie("refreshToken", {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "strict",
+        });
+
         // Suppression du refresh token en base
         user.refreshToken = null;
         await user.save();
