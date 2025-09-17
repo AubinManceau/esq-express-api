@@ -5,6 +5,7 @@ export default (req, res, next) => {
     try {
         let token;
 
+        console.log('Cookies:', req.cookies);
         if (req.cookies?.token) {
             token = req.cookies.token;
         }

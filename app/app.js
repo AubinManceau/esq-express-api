@@ -11,11 +11,13 @@ import teamRoutes from './routes/team.js';
 import convocationRoutes from './routes/convocation.js';
 import privateMessageRoutes from './routes/privateMessage.js';
 import groupChatRoutes from './routes/groupChats.js';
+import cookieParser from 'cookie-parser';
 
 const models = initModels(sequelize);
 const app = express();
 
 app.use(helmet());
+app.use(cookieParser());
 app.use(cors({
   origin: 'http://localhost:4000',
   methods: ['GET','POST','PUT','DELETE','PATCH','OPTIONS'],
