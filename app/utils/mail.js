@@ -9,7 +9,7 @@ export const sendVerificationEmail = async (email, firstName, lastName, token) =
             <p>Nous sommes ravis de vous accueillir à l'<strong>ESQ</strong>.</p>
             <p>Pour finaliser votre inscription, veuillez suivre le lien ci-dessous. Ce lien est valide pendant <strong>48 heures</strong>.</p>
             <div style="text-align: center; margin: 20px 0;">
-                <a href="https://monprojet.com/inscription?token=${token}" 
+                <a href="https://localhost:4000/inscription?token=${token}" 
                     style="background-color: #0066cc; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
                     Complétez votre inscription
                 </a>
@@ -67,7 +67,7 @@ export const sendPasswordResetEmail = async (email, firstName, lastName, token) 
             <p>Nous avons reçu une demande de réinitialisation de votre mot de passe. Si vous n'êtes pas à l'origine de cette demande, vous pouvez l'ignorer.</p>
             <p>Pour réinitialiser votre mot de passe, veuillez suivre le lien ci-dessous. Ce lien est valide pendant <strong>1 heure</strong>.</p>
             <div style="text-align: center; margin: 20px 0;">
-                <a href="https://monprojet.com/reset-password?token=${token}" 
+                <a href="https://localhost:4000/reinitialiser?token=${token}" 
                     style="background-color: #0066cc; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
                     Réinitialisez votre mot de passe
                 </a>
