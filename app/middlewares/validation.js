@@ -16,7 +16,7 @@ export const validateUpdateUser = [
 
 export const validateUpdateUserForAdmin = [
     body('email').optional().isEmail().withMessage('Email invalide'),
-    body('phone').optional().isLength({ min: 10, max: 10 }).withMessage('Numéro de téléphone invalide'),
+    body('phone').optional({ checkFalsy: true }).isLength({ min: 10, max: 10 }).withMessage('Numéro de téléphone invalide'),
     body('firstName').optional().isString().isLength({ min: 2, max: 50 }).withMessage('Le prénom doit être une chaîne de caractères'),
     body('lastName').optional().isString().isLength({ min: 2, max: 80 }).withMessage('Le nom doit être une chaîne de caractères'),
     body('isActive').optional().isBoolean().withMessage("Le champ 'isActive' doit être un booléen"),

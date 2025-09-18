@@ -755,4 +755,5 @@ router.post('/forgot-password', authCtrl.forgotPassword);
  *                   example: Erreur interne du serveur lors de la réinitialisation du mot de passe.
  */
 router.post('/reset-password', validateResetPassword, authCtrl.resetPassword);
+router.get('/profile', auth, authCtrl.getProfile);
 export default router;

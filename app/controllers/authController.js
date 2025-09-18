@@ -616,6 +616,56 @@ const resetPassword = async (req, res) => {
     }
 };
 
+const getProfile = async (req, res) => {
+    try {
+        const userId = req.auth.userId;
+
+        const user = await models.Users.findByPk(userId, {
+            include: [
+                {
+                    model: models.UserRolesCategories,
+                    include: [
+                        { model: models.Roles },
+                        { model: models.Categories }
+                    ]
+                }
+            ]
+        });
+        if (!user || !user.isActive) {
+            return res.status(404).json({ 
+                status: 'error',
+                message: 'Utilisateur non trouvé ou inactif.' 
+            });
+        }
+
+        const userData = {
+            id: user.id,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            email: user.email,
+            phone: user.phone,
+            roles: user.UserRolesCategories ? user.UserRolesCategories.map(urc => ({
+                roleId: urc.roleId,
+                roleName: urc.Role ? urc.Role.name : null,
+                categoryId: urc.categoryId,
+                categoryName: urc.Category ? urc.Category.name : null
+            })) : []
+        };
+
+        return res.status(200).json({
+            status: 'success',
+            message: 'Profil utilisateur récupéré avec succès.',
+            data: { user: userData }
+        });
+
+    } catch (error) {
+        return res.status(500).json({ 
+            status: 'error',
+            message: 'Erreur interne du serveur lors de la récupération du profil utilisateur.'
+        });
+    }
+};
+
 export default {
     signup,
     definePassword,
@@ -625,4 +675,5 @@ export default {
     logout,
     resetPassword,
     forgotPassword,
+    getProfile
 };

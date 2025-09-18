@@ -30,12 +30,12 @@ app.use(cors({
 }));
 app.disable('x-powered-by');
 
-const limiter = rateLimit({
-  windowMs: process.env.RATE_LIMIT_WINDOW * 60 * 1000,
-  max: process.env.RATE_LIMIT_MAX,
-  message: {error: 'Trop de requêtes, veuillez réessayer plus tard.'},
-});
-app.use(limiter);
+// const limiter = rateLimit({
+//   windowMs: process.env.RATE_LIMIT_WINDOW * 60 * 1000,
+//   max: process.env.RATE_LIMIT_MAX,
+//   message: {error: 'Trop de requêtes, veuillez réessayer plus tard.'},
+// });
+// app.use(limiter);
 
 app.use(express.json());
 app.use('/api/v1/users', userRoutes);
