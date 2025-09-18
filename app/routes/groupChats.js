@@ -4,7 +4,7 @@ import groupMessagesCtrl from '../controllers/groupMessagesController.js';
 import auth from '../middlewares/auth.js';
 import role from '../middlewares/role.js';
 import cacheMiddleware from '../middlewares/cache.js';
-import { validateCreateGroupChat, validateUpdateGroupChat, validateSendGroupMessage } from '../middlewares/validationGroupChats.js';
+import { validateCreateGroupChat, validateUpdateGroupChat, validateSendGroupMessage } from '../middlewares/validation.js';
 
 const router = express.Router();
 
