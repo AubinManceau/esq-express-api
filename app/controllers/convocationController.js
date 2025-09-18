@@ -1,5 +1,6 @@
 import redis from '../config/redisClient.js';
 import models from '../models/index.js';
+import { Op } from 'sequelize';
 
 const createConvocation = async (req, res) => {
     const t = await models.sequelize.transaction();
@@ -176,9 +177,24 @@ const deleteConvocation = async (req, res) => {
 
 const getAllConvocations = async (req, res) => {
     try {
+        let { _category } = req.query;
+
+        if (_category && !Array.isArray(_category)) {
+            _category = [_category];
+        }
+
+        const whereCategory = {};
+        if (_category && _category.length > 0) {
+            whereCategory.id = { [Op.in]: _category };
+        }
+
         const convocations = await models.Convocations.findAll({
             include: [
-                { model: models.Teams, attributes: ['id', 'name'] },
+                { 
+                    model: models.Teams, 
+                    attributes: ['id', 'name'],
+                    where: Object.keys(whereCategory).length ? whereCategory : undefined
+                },
                 { model: models.Users, attributes: ['id', 'firstName', 'lastName'], through: { attributes: [] } }
             ]
         });
