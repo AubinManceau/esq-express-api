@@ -47,7 +47,6 @@ const createConvocation = async (req, res) => {
 
         await convocation.addUsers(players, { transaction: t });
         await redis.del('convocations:{}{}');
-        await redis.del('convocations-category:{}{}');
         await t.commit();
         return res.status(201).json({
             status: 'success',
@@ -128,7 +127,6 @@ const updateConvocation = async (req, res) => {
 
         await convocation.save({ transaction: t });
         await redis.del('convocations:{}{}');
-        await redis.del('convocations-category:{}{}');
         await t.commit();
         return res.status(200).json({
             status: 'success',
@@ -164,7 +162,6 @@ const deleteConvocation = async (req, res) => {
 
         await convocation.destroy();
         await redis.del('convocations:{}{}');
-        await redis.del('convocations-category:{}{}');
         return res.status(200).json({
             status: 'success',
             message: 'Convocation supprimée avec succès.',
@@ -237,63 +234,10 @@ const getOneConvocation = async (req, res) => {
     }
 };
 
-const getConvocationsByCategory = async (req, res) => {
-    try {
-        const userRoles = req.auth.roles;
-        if (!userRoles || userRoles.length === 0) {
-            return res.status(403).json({
-                status: 'error',
-                message: 'Rôle non autorisé.',
-            });
-        }
-        const userCategories = userRoles
-            .map(role => role.categoryId)
-            .filter(categoryId => categoryId !== null && categoryId !== undefined);
-
-        if (userCategories.length === 0) {
-            return res.status(403).json({
-                status: 'error',
-                message: 'Aucune catégorie associée à vos rôles.',
-            });
-        }
-
-        const teams = await models.Teams.findAll({
-            where: { categoryId: userCategories },
-        });
-
-        const convocations = await models.Convocations.findAll({
-            where: { teamId: teams.map(team => team.id) },
-            include: [
-                { model: models.Teams, attributes: ['id', 'name'] },
-                { model: models.Users, attributes: ['id', 'firstName', 'lastName'], through: { attributes: [] } }
-            ]
-        });
-
-        if (convocations.length === 0) {
-            return res.status(404).json({
-                status: 'error',
-                message: 'Aucune convocation trouvée pour vos catégories.',
-            });
-        }
-
-        return res.status(200).json({
-            status: 'success',
-            message: 'Convocations récupérées avec succès.',
-            data: { convocations }
-        });
-    } catch (error) {
-        return res.status(500).json({
-            status: 'error',
-            message: 'Une erreur est survenue lors de la récupération des convocations par catégorie.',
-        });
-    }
-};
-
 export default {
     createConvocation,
     updateConvocation,
     deleteConvocation,
     getAllConvocations,
     getOneConvocation,
-    getConvocationsByCategory
 };

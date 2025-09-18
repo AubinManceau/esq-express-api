@@ -22,7 +22,7 @@ export default {
         allowNull: false,
       },
       status: {
-        type: Sequelize.ENUM('active', 'cancelled'),
+        type: Sequelize.ENUM('active', 'canceled'),
         allowNull: false,
         defaultValue: 'active',
       },

@@ -3,6 +3,7 @@ import trainingCtrl from '../controllers/trainingController.js';
 import auth from '../middlewares/auth.js';
 import role from '../middlewares/role.js';
 import cacheMiddleware from '../middlewares/cache.js';
+import { validateCreateTraining, validateUpdateTraining } from '../middlewares/validation.js';
 
 /**
  * @swagger
@@ -360,7 +361,7 @@ router.get('/', auth, cacheMiddleware('trainings:', 120), role([4]), trainingCtr
  *                   type: string
  *                   example: Erreur interne du serveur lors de la création de l'entrainement.
  */
-router.post('/', auth, role([2, 4]), trainingCtrl.createTraining);
+router.post('/', auth, role([2, 4]), validateCreateTraining, trainingCtrl.createTraining);
 /**
  * @swagger
  * /trainings/{id}:
@@ -466,7 +467,7 @@ router.post('/', auth, role([2, 4]), trainingCtrl.createTraining);
  *                   type: string
  *                   example: Erreur interne du serveur lors de la modification de l'entrainement.
  */
-router.patch('/:id', auth, role([2, 4]), trainingCtrl.updateTraining);
+router.patch('/:id', auth, role([2, 4]), validateUpdateTraining, trainingCtrl.updateTraining);
 /**
  * @swagger
  * /trainings/{id}/status/{status}:

@@ -15,7 +15,7 @@ export default (sequelize) => {
       allowNull: false,
     },
     status: {
-      type: DataTypes.ENUM('active', 'cancelled'),
+      type: DataTypes.ENUM('active', 'canceled'),
       allowNull: false,
       defaultValue: 'active',
     },
