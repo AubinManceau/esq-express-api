@@ -12,6 +12,10 @@ import convocationRoutes from './routes/convocation.js';
 import privateMessageRoutes from './routes/privateMessage.js';
 import groupChatRoutes from './routes/groupChats.js';
 import cookieParser from 'cookie-parser';
+import rateLimit from 'express-rate-limit';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const models = initModels(sequelize);
 const app = express();
@@ -24,6 +28,14 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'x-client-type'],
   credentials: true,
 }));
+app.disable('x-powered-by');
+
+const limiter = rateLimit({
+  windowMs: process.env.RATE_LIMIT_WINDOW * 60 * 1000,
+  max: process.env.RATE_LIMIT_MAX,
+  message: {error: 'Trop de requêtes, veuillez réessayer plus tard.'},
+});
+app.use(limiter);
 
 app.use(express.json());
 app.use('/api/v1/users', userRoutes);
