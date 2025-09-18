@@ -72,7 +72,7 @@ const signup = async (req, res) => {
         sendVerificationEmail(email, firstName, lastName, token)
             .catch(err => console.error("Erreur email :", err));
 
-        await redis.del('users:');
+        await redis.del('users:{}{}');
         await t.commit();
         return res.status(201).json({ 
             status: 'success',
@@ -204,7 +204,7 @@ const definePassword = async (req, res) => {
         user.password = hashedPassword;
         user.isActive = true;
         await user.save();
-        await redis.del('users:');
+        await redis.del('users:{}{}');
 
         return res.status(200).json({ 
             status: 'success',
@@ -602,7 +602,7 @@ const resetPassword = async (req, res) => {
         const hashedPassword = await bcrypt.hash(newPassword, 10);
         user.password = hashedPassword;
         await user.save();
-        await redis.del('users:');
+        await redis.del('users:{}{}');
 
         return res.status(200).json({ 
             status: 'success',

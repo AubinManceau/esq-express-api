@@ -41,8 +41,8 @@ const createTeam = async (req, res) => {
 
         const team = await models.Teams.create({ name, categoryId }, { transaction: t });
         await team.addUsers(coaches, { transaction: t });
-        await redis.del('teams:');
-        await redis.del('teams-category:');
+        await redis.del('teams:{}{}');
+        await redis.del('teams-category:{}{}');
         await t.commit();
         return res.status(201).json({
             status: 'success',
@@ -121,8 +121,8 @@ const updateTeam = async (req, res) => {
         }
         
         await team.save({ transaction: t });
-        await redis.del('teams:');
-        await redis.del('teams-category:');
+        await redis.del('teams:{}{}');
+        await redis.del('teams-category:{}{}');
         await t.commit();
         return res.status(200).json({
             status: 'success',
@@ -158,8 +158,8 @@ const deleteTeam = async (req, res) => {
             });
         }
 
-        await redis.del('teams:');
-        await redis.del('teams-category:');
+        await redis.del('teams:{}{}');
+        await redis.del('teams-category:{}{}');
         await team.destroy();
         return res.status(200).json({
             status: 'success',

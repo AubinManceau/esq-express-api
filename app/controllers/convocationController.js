@@ -46,8 +46,8 @@ const createConvocation = async (req, res) => {
         }, { transaction: t });
 
         await convocation.addUsers(players, { transaction: t });
-        await redis.del('convocations:');
-        await redis.del('convocations-category:');
+        await redis.del('convocations:{}{}');
+        await redis.del('convocations-category:{}{}');
         await t.commit();
         return res.status(201).json({
             status: 'success',
@@ -127,8 +127,8 @@ const updateConvocation = async (req, res) => {
         }
 
         await convocation.save({ transaction: t });
-        await redis.del('convocations:');
-        await redis.del('convocations-category:');
+        await redis.del('convocations:{}{}');
+        await redis.del('convocations-category:{}{}');
         await t.commit();
         return res.status(200).json({
             status: 'success',
@@ -163,8 +163,8 @@ const deleteConvocation = async (req, res) => {
         }
 
         await convocation.destroy();
-        await redis.del('convocations:');
-        await redis.del('convocations-category:');
+        await redis.del('convocations:{}{}');
+        await redis.del('convocations-category:{}{}');
         return res.status(200).json({
             status: 'success',
             message: 'Convocation supprimée avec succès.',

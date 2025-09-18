@@ -38,8 +38,8 @@ const createTraining = async (req, res) => {
         const usersIds = [...new Set(users.map(u => u.userId))];
 
         await training.addUsers(usersIds, { transaction: t }); 
-        await redis.del('trainings:');
-        await redis.del('trainings-user:');
+        await redis.del('trainings:{}{}');
+        await redis.del('trainings-user:{}{}');
 
         await t.commit();
         return res.status(201).json({ 
@@ -117,8 +117,8 @@ const updateTraining = async (req, res) => {
         }
 
         await training.save({ transaction: t });
-        await redis.del('trainings:');
-        await redis.del('trainings-user:');
+        await redis.del('trainings:{}{}');
+        await redis.del('trainings-user:{}{}');
         await t.commit();
 
         return res.status(200).json({ 
@@ -159,8 +159,8 @@ const deleteTraining = async (req, res) => {
             });
         }
 
-        await redis.del('trainings:');
-        await redis.del('trainings-user:');
+        await redis.del('trainings:{}{}');
+        await redis.del('trainings-user:{}{}');
         await training.destroy();
 
         return res.status(200).json({ 
@@ -395,8 +395,8 @@ const updateTrainingUserStatus = async (req, res) => {
         }
 
         record.status = status;
-        await redis.del('trainings:');
-        await redis.del('trainings-user:');
+        await redis.del('trainings:{}{}');
+        await redis.del('trainings-user:{}{}');
         await record.save();
 
         return res.status(200).json({

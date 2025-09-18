@@ -74,7 +74,7 @@ const createGroupChat = async (req, res) => {
             await groupChat.addUsers(userIds, { transaction: t });
         }
 
-        await redis.del('groupChats:');
+        await redis.del('groupChats:{}{}');
         await t.commit();
         return res.status(201).json({
             status: 'success',
@@ -157,7 +157,7 @@ const updateGroupChat = async (req, res) => {
         }
 
         await groupChat.setUsers(userIds, { transaction: t });
-        await redis.del('groupChats:');
+        await redis.del('groupChats:{}{}');
         await t.commit();
 
         return res.status(200).json({
@@ -191,7 +191,7 @@ const deleteGroupChat = async (req, res) => {
         }
 
         await groupChat.destroy({ transaction: t });
-        await redis.del('groupChats:');
+        await redis.del('groupChats:{}{}');
         await t.commit();
         return res.status(200).json({
             status: 'success',
