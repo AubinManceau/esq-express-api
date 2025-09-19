@@ -337,10 +337,21 @@ const deleteUser = async (req, res) => {
     }
 };
 
+const getFiles = (req, res) => {
+    const { filename } = req.params;
+    const filePath = path.resolve('app/uploads', filename);
+
+    if (!fs.existsSync(filePath)) {
+        return res.status(404).json({ status: 'error', message: 'Fichier non trouvé.' });
+    }
+    res.sendFile(filePath);
+};
+
 export default {
     updateUser,
     updateUserForAdmin,
     updatePassword,
+    getFiles,
     getUser,
     getUsers,
     deleteUser

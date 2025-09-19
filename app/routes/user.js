@@ -617,4 +617,6 @@ router.get('/:userId', express.json(), auth, userCtrl.getUser);
  */
 router.get('/', express.json(), auth, cacheMiddleware('users:', 120), userCtrl.getUsers);
 
+router.get('/uploads/:filename', express.json(), auth, role([3, 4]), userCtrl.getFiles);
+
 export default router;
