@@ -105,6 +105,7 @@ const updateUserForAdmin = async (req, res) => {
         if (isActive !== undefined) {
             user.isActive = isActive; 
             user.refreshToken = "";
+            user.password = null;
         }
 
         if (Array.isArray(rolesCategories)) {
