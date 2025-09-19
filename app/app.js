@@ -14,6 +14,7 @@ import groupChatRoutes from './routes/groupChats.js';
 import cookieParser from 'cookie-parser';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
+import path from 'path';
 
 dotenv.config();
 
@@ -29,6 +30,9 @@ app.use(cors({
   credentials: true,
 }));
 app.disable('x-powered-by');
+
+const uploadsDir = path.join(process.cwd(), 'app/uploads');
+app.use('/uploads', express.static(uploadsDir));
 
 // const limiter = rateLimit({
 //   windowMs: process.env.RATE_LIMIT_WINDOW * 60 * 1000,

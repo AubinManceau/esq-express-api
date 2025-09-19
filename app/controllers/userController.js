@@ -87,10 +87,10 @@ const updateUserForAdmin = async (req, res) => {
         }
 
         if (req.files && req.files.photo) {
-            user.photo = `app/uploads/${req.files.photo[0].filename}`;
+            user.photo = `/uploads/${req.files.photo[0].filename}`;
         }
         if (req.files && req.files.photo_celebration) {
-            user.photo_celebration = `app/uploads/${req.files.photo_celebration[0].filename}`;
+            user.photo_celebration = `/uploads/${req.files.photo_celebration[0].filename}`;
         }
 
         if (email !== undefined) user.email = email;
