@@ -668,8 +668,111 @@ const getProfile = async (req, res) => {
     }
 };
 
+const bulkSignup = async (req, res) => {
+    const t = await models.sequelize.transaction();
+
+    try {
+        const users = req.body.users;
+        if (!Array.isArray(users) || users.length === 0) {
+            await t.rollback();
+            return res.status(400).json({ status: 'error', message: 'Aucun utilisateur à créer.' });
+        }
+
+        // 1️⃣ Emails existants
+        const emails = users.map(u => u.email).filter(Boolean);
+        const existingUsers = await models.Users.findAll({ where: { email: emails }, transaction: t });
+        const existingEmails = new Set(existingUsers.map(u => u.email));
+
+        const validUsers = [];
+        const results = [];
+
+        // 2️⃣ Filtrer utilisateurs valides
+        for (const u of users) {
+            const { firstName, lastName, email, phone, rolesCategories, licence } = u;
+            if (!email || !Array.isArray(rolesCategories) || rolesCategories.length === 0 || !firstName || !lastName) {
+                results.push({ email: email || null, status: 'error', message: 'Nom, Prénom, Email et au moins un rôle sont requis.' });
+                continue;
+            }
+            if (existingEmails.has(email)) {
+                results.push({ email, status: 'error', message: 'Utilisateur déjà existant.' });
+                continue;
+            }
+            validUsers.push({ firstName, lastName, email, phone: phone || null, licence: licence || null });
+        }
+
+        if (validUsers.length === 0) {
+            await t.rollback();
+            return res.status(400).json({ status: 'error', message: 'Aucun utilisateur valide à créer.', results });
+        }
+
+        // 3️⃣ Créer utilisateurs en bulk
+        const createdUsers = await models.Users.bulkCreate(validUsers, { transaction: t, returning: true });
+
+        // 4️⃣ Préparer UserRolesCategories et trainings
+        const userRolesCategoriesData = [];
+        const trainingRelations = [];
+
+        // Récupérer tous les trainings nécessaires d'un coup
+        const categoryIds = new Set();
+        users.forEach(u => u.rolesCategories.forEach(rc => { if ([1,2].includes(Number(rc.roleId)) && rc.categoryId) categoryIds.add(rc.categoryId); }));
+        const trainingsByCategory = {};
+        if (categoryIds.size > 0) {
+            const trainings = await models.Trainings.findAll({ where: { categoryId: Array.from(categoryIds) }, transaction: t });
+            trainings.forEach(tr => {
+                if (!trainingsByCategory[tr.categoryId]) trainingsByCategory[tr.categoryId] = [];
+                trainingsByCategory[tr.categoryId].push(tr.id);
+            });
+        }
+
+        // Boucler sur les utilisateurs créés
+        for (const user of createdUsers) {
+            const originalData = users.find(u => u.email === user.email);
+            for (const { roleId, categoryId } of originalData.rolesCategories) {
+                userRolesCategoriesData.push({
+                    userId: user.id,
+                    roleId: Number(roleId),
+                    categoryId: categoryId ? Number(categoryId) : null
+                });
+
+                if ([1,2].includes(Number(roleId)) && categoryId && trainingsByCategory[categoryId]) {
+                    trainingsByCategory[categoryId].forEach(trainingId => {
+                        trainingRelations.push({ userId: user.id, trainingId });
+                    });
+                }
+            }
+        }
+
+        // 5️⃣ Créer en bulk les relations
+        if (userRolesCategoriesData.length > 0) {
+            await models.UserRolesCategories.bulkCreate(userRolesCategoriesData, { transaction: t });
+        }
+        if (trainingRelations.length > 0) {
+            await models.UserTrainings.bulkCreate(trainingRelations, { transaction: t });
+        }
+
+        // 6️⃣ Générer tokens et envoyer emails en parallèle
+        await Promise.all(createdUsers.map(async (user) => {
+            const token = jwt.sign({ userId: user.id }, process.env.SECRET_KEY_SIGNUP, { expiresIn: '48h' });
+            const originalData = users.find(u => u.email === user.email);
+            sendVerificationEmail(user.email, user.firstName, user.lastName, token).catch(err => console.error("Erreur email :", err));
+            results.push({ email: user.email, status: 'success', message: 'Utilisateur créé', data: { userId: user.id, token } });
+        }));
+
+        await redis.del('users:{}{}');
+        await t.commit();
+
+        return res.status(207).json({ status: 'finished', results });
+
+    } catch (error) {
+        await t.rollback();
+        return res.status(500).json({ status: 'error', message: error.message });
+    }
+};
+
+
 export default {
     signup,
+    bulkSignup,
     definePassword,
     login,
     resendConfirmationEmail,

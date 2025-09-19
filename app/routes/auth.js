@@ -134,6 +134,7 @@ const router = express.Router();
  *                   example: Erreur interne du serveur lors de la création de l'utilisateur.
  */
 router.post('/signup', auth, validateSignup, role([4]), authCtrl.signup);
+router.post('/bulk-signup', auth, role([4]), authCtrl.bulkSignup);
 /**
  * @swagger
  * /resend-confirmation/{id}:
