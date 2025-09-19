@@ -21,8 +21,8 @@ export const validateUpdateUserForAdmin = [
     body('lastName').optional().isString().isLength({ min: 2, max: 80 }).withMessage('Le nom doit être une chaîne de caractères'),
     body('isActive').optional().isBoolean().withMessage("Le champ 'isActive' doit être un booléen"),
     body('rolesCategories').optional().isArray().withMessage("Le champ 'rolesCategories' doit être un tableau"),
-    body('rolesCategories.*.roleId').isInt().withMessage("Le champ 'roleId' dans 'rolesCategories' doit être un entier"),
-    body('rolesCategories.*.categoryId')
+    body('rolesCategories.*.roleId').toInt().isInt().withMessage("Le champ 'roleId' dans 'rolesCategories' doit être un entier"),
+    body('rolesCategories.*.categoryId').optional({ nullable: true, checkFalsy: true }).toInt()
         .custom((categoryId, { req, path }) => {
         const index = path.match(/\d+/)[0];
         const roleId = req.body.rolesCategories[index].roleId;
@@ -90,8 +90,8 @@ export const validateSignup = [
     body('lastName').optional().isString().isLength({ min: 2, max: 80 }).withMessage('Le nom doit être une chaîne de caractères'),
     body('isActive').optional().isBoolean().withMessage("Le champ 'isActive' doit être un booléen"),
     body('rolesCategories').optional().isArray().withMessage("Le champ 'rolesCategories' doit être un tableau"),
-    body('rolesCategories.*.roleId').isInt().withMessage("Le champ 'roleId' dans 'rolesCategories' doit être un entier"),
-    body('rolesCategories.*.categoryId')
+    body('rolesCategories.*.roleId').toInt().isInt().withMessage("Le champ 'roleId' dans 'rolesCategories' doit être un entier"),
+    body('rolesCategories.*.categoryId').optional({ nullable: true, checkFalsy: true }).toInt()
         .custom((categoryId, { req, path }) => {
         const index = path.match(/\d+/)[0];
         const roleId = req.body.rolesCategories[index].roleId;
