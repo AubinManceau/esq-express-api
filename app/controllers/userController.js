@@ -87,9 +87,13 @@ const updateUserForAdmin = async (req, res) => {
         }
 
         if (req.files && req.files.photo) {
+            const oldPath = user.photo ? path.join("app/uploads", path.basename(user.photo)) : null;
+            if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
             user.photo = `/uploads/${req.files.photo[0].filename}`;
         }
         if (req.files && req.files.photo_celebration) {
+            const oldPath = user.photo_celebration ? path.join("app/uploads", path.basename(user.photo_celebration)) : null;
+            if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
             user.photo_celebration = `/uploads/${req.files.photo_celebration[0].filename}`;
         }
 
