@@ -9,7 +9,7 @@ const signup = async (req, res) => {
     const t = await models.sequelize.transaction();
 
     try {
-        const { firstName, lastName, email, phone, rolesCategories } = req.body;
+        const { firstName, lastName, email, phone, rolesCategories, licence } = req.body;
 
         // Validation des données
         if (!email || !Array.isArray(rolesCategories) || rolesCategories.length === 0 || !firstName || !lastName) {
@@ -35,7 +35,8 @@ const signup = async (req, res) => {
             firstName,
             lastName,
             email,
-            phone: phone || null
+            phone: phone || null,
+            licence: licence || null
         }, { transaction: t });
 
         // Attribution des rôles et catégories + training si nécessaire
@@ -83,7 +84,8 @@ const signup = async (req, res) => {
                     firstName: user.firstName,
                     lastName: user.lastName,
                     email: user.email,
-                    phone: user.phone
+                    phone: user.phone,
+                    licence: user.licence
                 },
                 token
             }

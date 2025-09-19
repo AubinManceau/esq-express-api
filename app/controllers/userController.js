@@ -3,6 +3,8 @@ import bcrypt from 'bcryptjs';
 import 'dotenv/config';
 import redis from '../config/redisClient.js';
 import { Op } from 'sequelize';
+import fs from 'fs';
+import path from 'path';
 
 const updateUser = async (req, res) => {
     try {
@@ -61,7 +63,15 @@ const updateUserForAdmin = async (req, res) => {
                 message: "Un administrateur ne peut pas modifier son propre compte via cette route."
             });
         }
-        const { email, firstName, lastName, phone, isActive, rolesCategories } = req.body;
+        const { email, firstName, lastName, phone, isActive, rolesCategories, licence } = req.body;
+        let photo, photo_celebration;
+
+        if (req.files && req.files.photo) {
+        photo = `/uploads/${req.files.photo[0].filename}`;
+        }
+        if (req.files && req.files.photo_celebration) {
+        photo_celebration = `/uploads/${req.files.photo_celebration[0].filename}`;
+        }
 
         const user = await models.Users.findByPk(userId, { transaction: t });
         if (!user) {
@@ -72,10 +82,27 @@ const updateUserForAdmin = async (req, res) => {
             });
         }
 
+        if (photo !== undefined && user.photo) {
+            const oldPath = path.join("uploads", path.basename(user.photo));
+            if (fs.existsSync(oldPath)) {
+                fs.unlinkSync(oldPath);
+            }
+            user.photo = photo;
+        }
+
+        if (photo_celebration !== undefined && user.photo_celebration) {
+            const oldPath = path.join("uploads", path.basename(user.photo_celebration));
+            if (fs.existsSync(oldPath)) {
+                fs.unlinkSync(oldPath);
+            }
+            user.photo_celebration = photo_celebration;
+        }
+
         if (email !== undefined) user.email = email;
         if (firstName !== undefined) user.firstName = firstName;
         if (lastName !== undefined) user.lastName = lastName;
         if (phone !== undefined) user.phone = phone;
+        if (licence !== undefined) user.licence = licence;
         if (isActive !== undefined) {
             user.isActive = isActive; 
             user.refreshToken = "";
@@ -287,6 +314,16 @@ const deleteUser = async (req, res) => {
                 status: 'error',
                 message: "Utilisateur non trouvé."
             });
+        }
+
+        if (user.photo) {
+            const photoPath = path.join("uploads", path.basename(user.photo));
+            if (fs.existsSync(photoPath)) fs.unlinkSync(photoPath);
+        }
+
+        if (user.photo_celebration) {
+            const photoCelebrationPath = path.join("uploads", path.basename(user.photo_celebration));
+            if (fs.existsSync(photoCelebrationPath)) fs.unlinkSync(photoCelebrationPath);
         }
 
         await user.destroy();

@@ -25,7 +25,20 @@ export default (sequelize) => {
         isNumeric: true,
       },
     },
+    licence: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      unique: true,
+    },
     password: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    photo: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    photo_celebration: {
       type: DataTypes.STRING,
       allowNull: true,
     },

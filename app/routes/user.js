@@ -3,6 +3,7 @@ import userCtrl from '../controllers/userController.js';
 import auth from '../middlewares/auth.js';
 import role from '../middlewares/role.js';
 import cacheMiddleware from '../middlewares/cache.js';
+import upload from '../middlewares/upload.js'
 import { validateUpdateUser, validateUpdateUserForAdmin, validateUpdatePassword } from '../middlewares/validation.js';
 
 /**
@@ -344,7 +345,7 @@ router.patch('/password',auth, validateUpdatePassword, userCtrl.updatePassword);
  *                   type: string
  *                   example: Erreur interne du serveur lors de la mise à jour de l'utilisateur.
  */
-router.patch('/admin/:userId',auth, validateUpdateUserForAdmin, role([4]), userCtrl.updateUserForAdmin);
+router.patch('/admin/:userId',auth, upload.fields([{ name: 'photo', maxCount: 1 }, { name: 'photo_celebration', maxCount: 1 }]), validateUpdateUserForAdmin, role([4]), userCtrl.updateUserForAdmin);
 /**
  * @swagger
  * /users/{userId}:
