@@ -64,14 +64,6 @@ const updateUserForAdmin = async (req, res) => {
             });
         }
         const { email, firstName, lastName, phone, isActive, rolesCategories, licence } = req.body;
-        let photo, photo_celebration;
-
-        if (req.files && req.files.photo) {
-        photo = `/uploads/${req.files.photo[0].filename}`;
-        }
-        if (req.files && req.files.photo_celebration) {
-        photo_celebration = `/uploads/${req.files.photo_celebration[0].filename}`;
-        }
 
         const user = await models.Users.findByPk(userId, { transaction: t });
         if (!user) {
@@ -82,20 +74,23 @@ const updateUserForAdmin = async (req, res) => {
             });
         }
 
-        if (photo !== undefined && user.photo) {
-            const oldPath = path.join("uploads", path.basename(user.photo));
-            if (fs.existsSync(oldPath)) {
-                fs.unlinkSync(oldPath);
-            }
-            user.photo = photo;
+        if (req.body.photo === "DELETE" && user.photo) {
+            const oldPath = path.join("app/uploads", path.basename(user.photo));
+            if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+            user.photo = null;
         }
 
-        if (photo_celebration !== undefined && user.photo_celebration) {
-            const oldPath = path.join("uploads", path.basename(user.photo_celebration));
-            if (fs.existsSync(oldPath)) {
-                fs.unlinkSync(oldPath);
-            }
-            user.photo_celebration = photo_celebration;
+        if (req.body.photo_celebration === "DELETE" && user.photo_celebration) {
+            const oldPath = path.join("app/uploads", path.basename(user.photo_celebration));
+            if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+            user.photo_celebration = null;
+        }
+
+        if (req.files && req.files.photo) {
+            user.photo = `app/uploads/${req.files.photo[0].filename}`;
+        }
+        if (req.files && req.files.photo_celebration) {
+            user.photo_celebration = `app/uploads/${req.files.photo_celebration[0].filename}`;
         }
 
         if (email !== undefined) user.email = email;
@@ -317,12 +312,12 @@ const deleteUser = async (req, res) => {
         }
 
         if (user.photo) {
-            const photoPath = path.join("uploads", path.basename(user.photo));
+            const photoPath = path.join("app/uploads", path.basename(user.photo));
             if (fs.existsSync(photoPath)) fs.unlinkSync(photoPath);
         }
 
         if (user.photo_celebration) {
-            const photoCelebrationPath = path.join("uploads", path.basename(user.photo_celebration));
+            const photoCelebrationPath = path.join("app/uploads", path.basename(user.photo_celebration));
             if (fs.existsSync(photoCelebrationPath)) fs.unlinkSync(photoCelebrationPath);
         }
 

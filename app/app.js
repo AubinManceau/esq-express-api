@@ -37,14 +37,13 @@ app.disable('x-powered-by');
 // });
 // app.use(limiter);
 
-app.use(express.json());
 app.use('/api/v1/users', userRoutes);
-app.use('/api/v1/auth', authRoutes);
-app.use('/api/v1/articles', articleRoutes);
-app.use('/api/v1/trainings', trainingRoutes);
-app.use('/api/v1/teams', teamRoutes);
-app.use('/api/v1/convocations', convocationRoutes);
-app.use('/api/v1/private-messages', privateMessageRoutes);
-app.use('/api/v1/group-chats', groupChatRoutes);
+app.use('/api/v1/auth', express.json(), authRoutes);
+app.use('/api/v1/articles', express.json(), articleRoutes);
+app.use('/api/v1/trainings', express.json(), trainingRoutes);
+app.use('/api/v1/teams', express.json(), teamRoutes);
+app.use('/api/v1/convocations', express.json(), convocationRoutes);
+app.use('/api/v1/private-messages', express.json(), privateMessageRoutes);
+app.use('/api/v1/group-chats', express.json(), groupChatRoutes);
 
 export { app, models };
