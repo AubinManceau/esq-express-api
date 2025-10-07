@@ -2,7 +2,6 @@ import express from 'express';
 import authCtrl from '../controllers/authController.js';
 import auth from '../middlewares/auth.js';
 import role from '../middlewares/role.js';
-import { validateSignup, validateDefinePassword, validateResetPassword } from '../middlewares/validation.js';
 
 /**
  * @swagger
@@ -133,7 +132,7 @@ const router = express.Router();
  *                   type: string
  *                   example: Erreur interne du serveur lors de la création de l'utilisateur.
  */
-router.post('/signup', auth, validateSignup, role([4]), authCtrl.signup);
+router.post('/signup', auth, role([4]), authCtrl.signup);
 router.post('/bulk-signup', auth, role([4]), authCtrl.bulkSignup);
 /**
  * @swagger
@@ -578,7 +577,7 @@ router.post('/login', authCtrl.login);
  *                   type: string
  *                   example: Erreur interne du serveur lors de l'activation du compte.
  */
-router.post('/confirm', validateDefinePassword, authCtrl.definePassword);
+router.post('/confirm', authCtrl.definePassword);
 /**
  * @swagger
  * /forgot-password:
@@ -755,6 +754,6 @@ router.post('/forgot-password', authCtrl.forgotPassword);
  *                   type: string
  *                   example: Erreur interne du serveur lors de la réinitialisation du mot de passe.
  */
-router.post('/reset-password', validateResetPassword, authCtrl.resetPassword);
+router.post('/reset-password', authCtrl.resetPassword);
 router.get('/profile', auth, authCtrl.getProfile);
 export default router;

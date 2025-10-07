@@ -4,7 +4,6 @@ import auth from '../middlewares/auth.js';
 import role from '../middlewares/role.js';
 import cacheMiddleware from '../middlewares/cache.js';
 import upload from '../middlewares/upload.js'
-import { validateUpdateUser, validateUpdateUserForAdmin, validateUpdatePassword } from '../middlewares/validation.js';
 
 /**
  * @swagger
@@ -112,7 +111,7 @@ const router = express.Router();
  *                   type: string
  *                   example: Erreur interne du serveur lors de la mise à jour de l'utilisateur.
  */
-router.patch('/', express.json(), auth, validateUpdateUser, userCtrl.updateUser);
+router.patch('/', express.json(), auth, userCtrl.updateUser);
 /**
  * @swagger
  * /users/password:
@@ -211,7 +210,7 @@ router.patch('/', express.json(), auth, validateUpdateUser, userCtrl.updateUser)
  *                   type: string
  *                   example: Erreur interne du serveur lors de la mise à jour du mot de passe.
  */
-router.patch('/password', express.json(), auth, validateUpdatePassword, userCtrl.updatePassword);
+router.patch('/password', express.json(), auth, userCtrl.updatePassword);
 /**
  * @swagger
  * /users/admin/{userId}:
@@ -345,7 +344,7 @@ router.patch('/password', express.json(), auth, validateUpdatePassword, userCtrl
  *                   type: string
  *                   example: Erreur interne du serveur lors de la mise à jour de l'utilisateur.
  */
-router.patch('/admin/:userId',auth, upload.fields([{ name: 'photo', maxCount: 1 }, { name: 'photo_celebration', maxCount: 1 }]), validateUpdateUserForAdmin, role([4]), userCtrl.updateUserForAdmin);
+router.patch('/admin/:userId',auth, upload.fields([{ name: 'photo', maxCount: 1 }, { name: 'photo_celebration', maxCount: 1 }]), role([4]), userCtrl.updateUserForAdmin);
 /**
  * @swagger
  * /users/{userId}:
