@@ -678,7 +678,6 @@ const bulkSignup = async (req, res) => {
             return res.status(400).json({ status: 'error', message: 'Aucun utilisateur à créer.' });
         }
 
-        // 1️⃣ Emails existants
         const emails = users.map(u => u.email).filter(Boolean);
         const existingUsers = await models.Users.findAll({ where: { email: emails }, transaction: t });
         const existingEmails = new Set(existingUsers.map(u => u.email));
@@ -686,7 +685,6 @@ const bulkSignup = async (req, res) => {
         const validUsers = [];
         const results = [];
 
-        // 2️⃣ Filtrer utilisateurs valides
         for (const u of users) {
             const { firstName, lastName, email, phone, rolesCategories, licence } = u;
             if (!email || !Array.isArray(rolesCategories) || rolesCategories.length === 0 || !firstName || !lastName) {
@@ -705,14 +703,11 @@ const bulkSignup = async (req, res) => {
             return res.status(400).json({ status: 'error', message: 'Aucun utilisateur valide à créer.', results });
         }
 
-        // 3️⃣ Créer utilisateurs en bulk
         const createdUsers = await models.Users.bulkCreate(validUsers, { transaction: t, returning: true });
 
-        // 4️⃣ Préparer UserRolesCategories et trainings
         const userRolesCategoriesData = [];
         const trainingRelations = [];
 
-        // Récupérer tous les trainings nécessaires d'un coup
         const categoryIds = new Set();
         users.forEach(u => u.rolesCategories.forEach(rc => { if ([1,2].includes(Number(rc.roleId)) && rc.categoryId) categoryIds.add(rc.categoryId); }));
         const trainingsByCategory = {};
@@ -724,7 +719,6 @@ const bulkSignup = async (req, res) => {
             });
         }
 
-        // Boucler sur les utilisateurs créés
         for (const user of createdUsers) {
             const originalData = users.find(u => u.email === user.email);
             for (const { roleId, categoryId } of originalData.rolesCategories) {
@@ -742,7 +736,6 @@ const bulkSignup = async (req, res) => {
             }
         }
 
-        // 5️⃣ Créer en bulk les relations
         if (userRolesCategoriesData.length > 0) {
             await models.UserRolesCategories.bulkCreate(userRolesCategoriesData, { transaction: t });
         }
@@ -750,10 +743,8 @@ const bulkSignup = async (req, res) => {
             await models.UserTrainings.bulkCreate(trainingRelations, { transaction: t });
         }
 
-        // 6️⃣ Générer tokens et envoyer emails en parallèle
         await Promise.all(createdUsers.map(async (user) => {
             const token = jwt.sign({ userId: user.id }, process.env.SECRET_KEY_SIGNUP, { expiresIn: '48h' });
-            const originalData = users.find(u => u.email === user.email);
             sendVerificationEmail(user.email, user.firstName, user.lastName, token).catch(err => console.error("Erreur email :", err));
             results.push({ email: user.email, status: 'success', message: 'Utilisateur créé', data: { userId: user.id, token } });
         }));
