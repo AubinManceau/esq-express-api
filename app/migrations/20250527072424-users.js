@@ -30,6 +30,19 @@ export default {
         type: Sequelize.STRING,
         allowNull: true,
       },
+      licence: {
+        type: Sequelize.STRING,
+        allowNull: true,
+        unique: true,
+      },
+      photo: {
+        type: Sequelize.STRING,
+        allowNull: true,
+      },
+      photo_celebration: {
+        type: Sequelize.STRING,
+        allowNull: true,
+      },
       isActive: {
         type: Sequelize.BOOLEAN,
         defaultValue: false,

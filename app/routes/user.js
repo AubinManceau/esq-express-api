@@ -3,7 +3,7 @@ import userCtrl from '../controllers/userController.js';
 import auth from '../middlewares/auth.js';
 import role from '../middlewares/role.js';
 import cacheMiddleware from '../middlewares/cache.js';
-import { validateUpdateUser } from '../middlewares/validation.js';
+import upload from '../middlewares/upload.js'
 
 /**
  * @swagger
@@ -111,7 +111,7 @@ const router = express.Router();
  *                   type: string
  *                   example: Erreur interne du serveur lors de la mise à jour de l'utilisateur.
  */
-router.patch('/',auth, validateUpdateUser, userCtrl.updateUser);
+router.patch('/', express.json(), auth, userCtrl.updateUser);
 /**
  * @swagger
  * /users/password:
@@ -210,7 +210,7 @@ router.patch('/',auth, validateUpdateUser, userCtrl.updateUser);
  *                   type: string
  *                   example: Erreur interne du serveur lors de la mise à jour du mot de passe.
  */
-router.patch('/password',auth, userCtrl.updatePassword);
+router.patch('/password', express.json(), auth, userCtrl.updatePassword);
 /**
  * @swagger
  * /users/admin/{userId}:
@@ -344,7 +344,7 @@ router.patch('/password',auth, userCtrl.updatePassword);
  *                   type: string
  *                   example: Erreur interne du serveur lors de la mise à jour de l'utilisateur.
  */
-router.patch('/admin/:userId',auth, role([4]), userCtrl.updateUserForAdmin);
+router.patch('/admin/:userId',auth, upload.fields([{ name: 'photo', maxCount: 1 }, { name: 'photo_celebration', maxCount: 1 }]), role([4]), userCtrl.updateUserForAdmin);
 /**
  * @swagger
  * /users/{userId}:
@@ -414,7 +414,7 @@ router.patch('/admin/:userId',auth, role([4]), userCtrl.updateUserForAdmin);
  *                   type: string
  *                   example: Erreur interne du serveur lors de la suppression de l'utilisateur.
  */
-router.delete('/:userId',auth, role([4]), userCtrl.deleteUser);
+router.delete('/:userId', express.json(), auth, role([4]), userCtrl.deleteUser);
 /**
  * @swagger
  * /users/{userId}:
@@ -531,7 +531,7 @@ router.delete('/:userId',auth, role([4]), userCtrl.deleteUser);
  *                   type: string
  *                   example: "Erreur interne du serveur lors de la récupération de l'utilisateur."
  */
-router.get('/:userId',auth, userCtrl.getUser);
+router.get('/:userId', express.json(), auth, userCtrl.getUser);
 /**
  * @swagger
  * /users:
@@ -614,6 +614,8 @@ router.get('/:userId',auth, userCtrl.getUser);
  *                   type: string
  *                   example: Erreur interne du serveur lors de la récupération des utilisateurs.
  */
-router.get('/',auth, cacheMiddleware('users:', 120), userCtrl.getUsers);
+router.get('/', express.json(), auth, cacheMiddleware('users:', 120), userCtrl.getUsers);
+
+router.get('/uploads/:filename', express.json(), auth, role([3, 4]), userCtrl.getFiles);
 
 export default router;

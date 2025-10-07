@@ -1,5 +1,6 @@
 import models from '../models/index.js';
 import redis from '../config/redisClient.js';
+import { Op } from 'sequelize';
 
 const createTeam = async (req, res) => {
     const t = await models.sequelize.transaction();
@@ -41,8 +42,7 @@ const createTeam = async (req, res) => {
 
         const team = await models.Teams.create({ name, categoryId }, { transaction: t });
         await team.addUsers(coaches, { transaction: t });
-        await redis.del('teams:');
-        await redis.del('teams-category:');
+        await redis.del('teams:{}{}');
         await t.commit();
         return res.status(201).json({
             status: 'success',
@@ -121,8 +121,7 @@ const updateTeam = async (req, res) => {
         }
         
         await team.save({ transaction: t });
-        await redis.del('teams:');
-        await redis.del('teams-category:');
+        await redis.del('teams:{}{}');
         await t.commit();
         return res.status(200).json({
             status: 'success',
@@ -158,8 +157,7 @@ const deleteTeam = async (req, res) => {
             });
         }
 
-        await redis.del('teams:');
-        await redis.del('teams-category:');
+        await redis.del('teams:{}{}');
         await team.destroy();
         return res.status(200).json({
             status: 'success',
@@ -175,10 +173,29 @@ const deleteTeam = async (req, res) => {
 
 const getAllTeams = async (req, res) => {
     try {
+        let { _category } = req.query;
+
+        if (_category && !Array.isArray(_category)) {
+            _category = [_category];
+        }
+
+        const whereCategory = {};
+        if (_category && _category.length > 0) {
+            whereCategory.id = { [Op.in]: _category };
+        }
+
         const teams = await models.Teams.findAll({
             include: [
-                { model: models.Categories, attributes: ['id', 'name'] },
-                { model: models.Users, attributes: ['id', 'firstName', 'lastName', 'email', 'phone'], through: { attributes: [] } }
+                { 
+                    model: models.Categories, 
+                    attributes: ['id', 'name'],
+                    where: Object.keys(whereCategory).length ? whereCategory : undefined
+                },
+                { 
+                    model: models.Users,
+                    attributes: ['id', 'firstName', 'lastName', 'email', 'phone'],
+                    through: { attributes: [] }
+                }
             ]
         });
 
@@ -232,59 +249,10 @@ const getOneTeam = async (req, res) => {
     }
 };
 
-const getTeamsByCategory = async (req, res) => {
-    try {
-        const userRoles = req.auth.roles;
-        if (!userRoles || userRoles.length === 0) {
-            return res.status(403).json({
-                status: 'error',
-                message: 'Rôle non autorisé.',
-            });
-        }
-        const userCategories = userRoles
-            .map(role => role.categoryId)
-            .filter(categoryId => categoryId !== null && categoryId !== undefined);
-
-        if (userCategories.length === 0) {
-            return res.status(403).json({
-                status: 'error',
-                message: 'Aucune catégorie associée à vos rôles.',
-            });
-        }
-
-        const teams = await models.Teams.findAll({
-            where: { categoryId: userCategories },
-            include: [
-                { model: models.Categories, attributes: ['id', 'name'] },
-                { model: models.Users, attributes: ['id', 'firstName', 'lastName', 'email', 'phone'], through: { attributes: [] } }
-            ]
-        });
-
-        if (teams.length === 0) {
-            return res.status(404).json({
-                status: 'error',
-                message: 'Aucune équipe trouvée pour vos catégories.',
-            });
-        }
-
-        return res.status(200).json({
-            status: 'success',
-            message: 'Équipes récupérées avec succès.',
-            data: { teams }
-        });
-    } catch (error) {
-        return res.status(500).json({
-            status: 'error',
-            message: 'Une erreur est survenue lors de la récupération des équipes.',
-        });
-    }
-};
-
 export default {
     createTeam,
     updateTeam,
     deleteTeam,
     getAllTeams,
     getOneTeam,
-    getTeamsByCategory
 };

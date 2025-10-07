@@ -133,6 +133,7 @@ const router = express.Router();
  *                   example: Erreur interne du serveur lors de la création de l'utilisateur.
  */
 router.post('/signup', auth, role([4]), authCtrl.signup);
+router.post('/bulk-signup', auth, role([4]), authCtrl.bulkSignup);
 /**
  * @swagger
  * /resend-confirmation/{id}:
@@ -754,4 +755,5 @@ router.post('/forgot-password', authCtrl.forgotPassword);
  *                   example: Erreur interne du serveur lors de la réinitialisation du mot de passe.
  */
 router.post('/reset-password', authCtrl.resetPassword);
+router.get('/profile', auth, authCtrl.getProfile);
 export default router;

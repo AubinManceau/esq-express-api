@@ -2,15 +2,14 @@ import models from '../models/index.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import 'dotenv/config';
-import sendVerificationEmail from '../utils/mail.js';
-import sendPasswordResetEmail from '../utils/mail.js';
+import {sendVerificationEmail, sendPasswordResetEmail} from '../utils/mail.js';
 import redis from '../config/redisClient.js';
 
 const signup = async (req, res) => {
     const t = await models.sequelize.transaction();
 
     try {
-        const { firstName, lastName, email, phone, rolesCategories } = req.body;
+        const { firstName, lastName, email, phone, rolesCategories, licence } = req.body;
 
         // Validation des données
         if (!email || !Array.isArray(rolesCategories) || rolesCategories.length === 0 || !firstName || !lastName) {
@@ -36,7 +35,8 @@ const signup = async (req, res) => {
             firstName,
             lastName,
             email,
-            phone: phone || null
+            phone: phone || null,
+            licence: licence || null
         }, { transaction: t });
 
         // Attribution des rôles et catégories + training si nécessaire
@@ -45,7 +45,7 @@ const signup = async (req, res) => {
             if (!role) throw new Error(`Le rôle '${roleId}' n'existe pas`);
 
             let category = null;
-            if ([1, 2].includes(roleId)) {
+            if ([1, 2].includes(Number(roleId))) {
                 if (!categoryId) throw new Error(`La catégorie est requise pour le rôle '${role.name}'`);
 
                 category = await models.Categories.findByPk(categoryId, { transaction: t });
@@ -57,8 +57,8 @@ const signup = async (req, res) => {
 
             await models.UserRolesCategories.create({
                 userId: user.id,
-                roleId,
-                categoryId: category ? category.id : null
+                roleId: Number(roleId),
+                categoryId: categoryId ? Number(categoryId) : null
             }, { transaction: t });
         }
 
@@ -70,9 +70,10 @@ const signup = async (req, res) => {
         );
 
         // Envoi de l'email de vérification
-        await sendVerificationEmail(email, firstName, lastName, token);
+        sendVerificationEmail(email, firstName, lastName, token)
+            .catch(err => console.error("Erreur email :", err));
 
-        await redis.del('users:');
+        await redis.del('users:{}{}');
         await t.commit();
         return res.status(201).json({ 
             status: 'success',
@@ -83,7 +84,8 @@ const signup = async (req, res) => {
                     firstName: user.firstName,
                     lastName: user.lastName,
                     email: user.email,
-                    phone: user.phone
+                    phone: user.phone,
+                    licence: user.licence
                 },
                 token
             }
@@ -120,7 +122,8 @@ const resendConfirmationEmail = async (req, res) => {
         );
 
         // Envoi de l'email de vérification
-        await sendVerificationEmail(email, firstName, lastName, token);
+        sendVerificationEmail(email, firstName, lastName, token)
+            .catch(err => console.error("Erreur email :", err));
 
         return res.status(200).json({ 
             status: 'success',
@@ -203,7 +206,7 @@ const definePassword = async (req, res) => {
         user.password = hashedPassword;
         user.isActive = true;
         await user.save();
-        await redis.del('users:');
+        await redis.del('users:{}{}');
 
         return res.status(200).json({ 
             status: 'success',
@@ -243,9 +246,16 @@ const login = async (req, res) => {
             ]
         });
 
+        if (!user) {
+            return res.status(404).json({ 
+                status: 'error',
+                message: 'Identifiants incorrects ou compte non activé.' 
+            });
+        }
+
         // Vérification du mot de passe et de l'activation du compte
         const isPasswordValid = await bcrypt.compare(password, user.password);
-        if (!user || !user.isActive || !isPasswordValid) {
+        if (!user.isActive || !isPasswordValid) {
             return res.status(401).json({ 
                 status: 'error',
                 message: 'Identifiants incorrects ou compte non activé.' 
@@ -291,15 +301,38 @@ const login = async (req, res) => {
             await user.save();
         }
 
-        return res.status(200).json({
-            status: 'success',
-            message: 'Connexion réussie',
-            data: {
-                user: userData,
-                token: accessToken,
-                refreshToken: refreshToken
-            }
-        });
+        if (req.headers['x-client-type'] === 'web') {
+            res.cookie('token', accessToken, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'strict',
+                maxAge: 15 * 60 * 1000 // 15 minutes
+            });
+            res.cookie('refreshToken', refreshToken, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'strict',
+                maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+            });
+
+            return res.status(200).json({
+                status: 'success',
+                message: 'Connexion réussie',
+                data: {
+                    user: userData,
+                }
+            });
+        } else {
+            return res.status(200).json({
+                status: 'success',
+                message: 'Connexion réussie',
+                data: {
+                    user: userData,
+                    token: accessToken,
+                    refreshToken: refreshToken
+                }
+            });
+        }
     } catch (error) {
         console.error(error);
         return res.status(500).json({ 
@@ -367,15 +400,62 @@ const refreshAccessToken = async (req, res) => {
         user.refreshToken = newRefreshToken;
         await user.save();
 
-        return res.status(200).json({
-            status: 'success',
-            message: 'Nouveau token d\'accès généré avec succès.',
-            data: {
-                token: newAccessToken,
-                refreshToken: newRefreshToken,
-            }
-        });
+        if (req.headers['x-client-type'] === 'web') {
+            res.cookie('token', newAccessToken, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'strict',
+                maxAge: 15 * 60 * 1000 // 15 minutes
+            });
+            res.cookie('refreshToken', newRefreshToken, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'strict',
+                maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+            });
 
+            return res.status(200).json({
+                status: 'success',
+                message: 'Nouveau token d\'accès généré avec succès.',
+                data: {
+                    user: {
+                        id: user.id,
+                        firstName: user.firstName,
+                        lastName: user.lastName,
+                        email: user.email,
+                        phone: user.phone,
+                        roles: user.UserRolesCategories ? user.UserRolesCategories.map(urc => ({
+                            roleId: urc.roleId,
+                            roleName: urc.Role ? urc.Role.name : null,
+                            categoryId: urc.categoryId,
+                            categoryName: urc.Category ? urc.Category.name : null
+                        })) : []
+                    }
+                }
+            });
+        } else {
+            return res.status(200).json({
+                status: 'success',
+                message: 'Nouveau token d\'accès généré avec succès.',
+                data: {
+                    token: newAccessToken,
+                    refreshToken: newRefreshToken,
+                    user: {
+                        id: user.id,
+                        firstName: user.firstName,
+                        lastName: user.lastName,
+                        email: user.email,
+                        phone: user.phone,
+                        roles: user.UserRolesCategories ? user.UserRolesCategories.map(urc => ({
+                            roleId: urc.roleId,
+                            roleName: urc.Role ? urc.Role.name : null,
+                            categoryId: urc.categoryId,
+                            categoryName: urc.Category ? urc.Category.name : null
+                        })) : []
+                    }
+                }
+            });
+        }
     } catch (error) {
         return res.status(500).json({ 
             status: 'error',
@@ -396,6 +476,17 @@ const logout = async (req, res) => {
                 message: 'Utilisateur non trouvé ou inactif pour la déconnexion.'
             });
         }
+
+        res.clearCookie("token", {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "strict",
+        });
+        res.clearCookie("refreshToken", {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "strict",
+        });
 
         // Suppression du refresh token en base
         user.refreshToken = null;
@@ -444,7 +535,8 @@ const forgotPassword = async (req, res) => {
 
         // Envoi de l'email de réinitialisation
         const { firstName, lastName } = user;
-        await sendPasswordResetEmail(email, firstName, lastName, token);
+        sendPasswordResetEmail(email, firstName, lastName, token)
+            .catch(err => console.error("Erreur email :", err));
 
         return res.status(200).json({ 
             status: 'success',
@@ -512,7 +604,7 @@ const resetPassword = async (req, res) => {
         const hashedPassword = await bcrypt.hash(newPassword, 10);
         user.password = hashedPassword;
         await user.save();
-        await redis.del('users:');
+        await redis.del('users:{}{}');
 
         return res.status(200).json({ 
             status: 'success',
@@ -526,8 +618,152 @@ const resetPassword = async (req, res) => {
     }
 };
 
+const getProfile = async (req, res) => {
+    try {
+        const userId = req.auth.userId;
+
+        const user = await models.Users.findByPk(userId, {
+            include: [
+                {
+                    model: models.UserRolesCategories,
+                    include: [
+                        { model: models.Roles },
+                        { model: models.Categories }
+                    ]
+                }
+            ]
+        });
+        if (!user || !user.isActive) {
+            return res.status(404).json({ 
+                status: 'error',
+                message: 'Utilisateur non trouvé ou inactif.' 
+            });
+        }
+
+        const userData = {
+            id: user.id,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            email: user.email,
+            phone: user.phone,
+            roles: user.UserRolesCategories ? user.UserRolesCategories.map(urc => ({
+                roleId: urc.roleId,
+                roleName: urc.Role ? urc.Role.name : null,
+                categoryId: urc.categoryId,
+                categoryName: urc.Category ? urc.Category.name : null
+            })) : []
+        };
+
+        return res.status(200).json({
+            status: 'success',
+            message: 'Profil utilisateur récupéré avec succès.',
+            data: { user: userData }
+        });
+
+    } catch (error) {
+        return res.status(500).json({ 
+            status: 'error',
+            message: 'Erreur interne du serveur lors de la récupération du profil utilisateur.'
+        });
+    }
+};
+
+const bulkSignup = async (req, res) => {
+    const t = await models.sequelize.transaction();
+
+    try {
+        const users = req.body.users;
+        if (!Array.isArray(users) || users.length === 0) {
+            await t.rollback();
+            return res.status(400).json({ status: 'error', message: 'Aucun utilisateur à créer.' });
+        }
+
+        const emails = users.map(u => u.email).filter(Boolean);
+        const existingUsers = await models.Users.findAll({ where: { email: emails }, transaction: t });
+        const existingEmails = new Set(existingUsers.map(u => u.email));
+
+        const validUsers = [];
+        const results = [];
+
+        for (const u of users) {
+            const { firstName, lastName, email, phone, rolesCategories, licence } = u;
+            if (!email || !Array.isArray(rolesCategories) || rolesCategories.length === 0 || !firstName || !lastName) {
+                results.push({ email: email || null, status: 'error', message: 'Nom, Prénom, Email et au moins un rôle sont requis.' });
+                continue;
+            }
+            if (existingEmails.has(email)) {
+                results.push({ email, status: 'error', message: 'Utilisateur déjà existant.' });
+                continue;
+            }
+            validUsers.push({ firstName, lastName, email, phone: phone || null, licence: licence || null });
+        }
+
+        if (validUsers.length === 0) {
+            await t.rollback();
+            return res.status(400).json({ status: 'error', message: 'Aucun utilisateur valide à créer.', results });
+        }
+
+        const createdUsers = await models.Users.bulkCreate(validUsers, { transaction: t, returning: true });
+
+        const userRolesCategoriesData = [];
+        const trainingRelations = [];
+
+        const categoryIds = new Set();
+        users.forEach(u => u.rolesCategories.forEach(rc => { if ([1,2].includes(Number(rc.roleId)) && rc.categoryId) categoryIds.add(rc.categoryId); }));
+        const trainingsByCategory = {};
+        if (categoryIds.size > 0) {
+            const trainings = await models.Trainings.findAll({ where: { categoryId: Array.from(categoryIds) }, transaction: t });
+            trainings.forEach(tr => {
+                if (!trainingsByCategory[tr.categoryId]) trainingsByCategory[tr.categoryId] = [];
+                trainingsByCategory[tr.categoryId].push(tr.id);
+            });
+        }
+
+        for (const user of createdUsers) {
+            const originalData = users.find(u => u.email === user.email);
+            for (const { roleId, categoryId } of originalData.rolesCategories) {
+                userRolesCategoriesData.push({
+                    userId: user.id,
+                    roleId: Number(roleId),
+                    categoryId: categoryId ? Number(categoryId) : null
+                });
+
+                if ([1,2].includes(Number(roleId)) && categoryId && trainingsByCategory[categoryId]) {
+                    trainingsByCategory[categoryId].forEach(trainingId => {
+                        trainingRelations.push({ userId: user.id, trainingId });
+                    });
+                }
+            }
+        }
+
+        if (userRolesCategoriesData.length > 0) {
+            await models.UserRolesCategories.bulkCreate(userRolesCategoriesData, { transaction: t });
+        }
+        if (trainingRelations.length > 0) {
+            await models.UserTrainings.bulkCreate(trainingRelations, { transaction: t });
+        }
+
+        await Promise.all(createdUsers.map(async (user) => {
+            const token = jwt.sign({ userId: user.id }, process.env.SECRET_KEY_SIGNUP, { expiresIn: '48h' });
+            sendVerificationEmail(user.email, user.firstName, user.lastName, token).catch(err => console.error("Erreur email :", err));
+            results.push({ email: user.email, status: 'success', message: 'Utilisateur créé', data: { userId: user.id, token } });
+        }));
+
+        await redis.del('users:{}{}');
+        await t.commit();
+
+        return res.status(207).json({ status: 'finished', results });
+
+    } catch (error) {
+        await t.rollback();
+        return res.status(500).json({ status: 'error', message: error.message });
+    }
+};
+
+
 export default {
     signup,
+    bulkSignup,
     definePassword,
     login,
     resendConfirmationEmail,
@@ -535,4 +771,5 @@ export default {
     logout,
     resetPassword,
     forgotPassword,
+    getProfile
 };

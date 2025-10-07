@@ -4,7 +4,7 @@ import bcrypt from 'bcryptjs';
 export default {
   async up (queryInterface) {
     const roles = ['joueur', 'coach', 'membre', 'admin'];
-    const categories = ['U7', 'U9', 'U11', 'U13', 'U15', 'U18', 'senior', 'veteran', 'futsal'];
+    const categories = ['U7', 'U9', 'U11', 'U13', 'U15', 'U18', 'senior', 'veteran', 'futsal', 'feminines'];
     const userEmail = process.env.ADMIN_EMAIL;
     const userPassword = process.env.ADMIN_PASSWORD;
     const hashedPassword = await bcrypt.hash(userPassword, 10);
@@ -43,7 +43,7 @@ export default {
     }, {});
 
     await queryInterface.bulkDelete('categories', {
-      name: ['U7', 'U9', 'U11', 'U13', 'U15', 'U18', 'senior', 'veteran', 'futsal']
+      name: ['U7', 'U9', 'U11', 'U13', 'U15', 'U18', 'senior', 'veteran', 'futsal', 'feminines']
     }, {});
 
     await queryInterface.bulkDelete('users', {

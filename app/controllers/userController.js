@@ -2,6 +2,9 @@ import models from '../models/index.js';
 import bcrypt from 'bcryptjs';
 import 'dotenv/config';
 import redis from '../config/redisClient.js';
+import { Op } from 'sequelize';
+import fs from 'fs';
+import path from 'path';
 
 const updateUser = async (req, res) => {
     try {
@@ -22,7 +25,7 @@ const updateUser = async (req, res) => {
         if (phone !== undefined) user.phone = phone;
 
         await user.save();
-        await redis.del('users:');
+        await redis.del('users:{}{}');
 
         res.status(200).json({
             status: 'success',
@@ -60,7 +63,7 @@ const updateUserForAdmin = async (req, res) => {
                 message: "Un administrateur ne peut pas modifier son propre compte via cette route."
             });
         }
-        const { email, firstName, lastName, phone, isActive, rolesCategories } = req.body;
+        const { email, firstName, lastName, phone, isActive, rolesCategories, licence } = req.body;
 
         const user = await models.Users.findByPk(userId, { transaction: t });
         if (!user) {
@@ -71,13 +74,38 @@ const updateUserForAdmin = async (req, res) => {
             });
         }
 
+        if (req.body.photo === "DELETE" && user.photo) {
+            const oldPath = path.join("app/uploads", path.basename(user.photo));
+            if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+            user.photo = null;
+        }
+
+        if (req.body.photo_celebration === "DELETE" && user.photo_celebration) {
+            const oldPath = path.join("app/uploads", path.basename(user.photo_celebration));
+            if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+            user.photo_celebration = null;
+        }
+
+        if (req.files && req.files.photo) {
+            const oldPath = user.photo ? path.join("app/uploads", path.basename(user.photo)) : null;
+            if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+            user.photo = `/uploads/${req.files.photo[0].filename}`;
+        }
+        if (req.files && req.files.photo_celebration) {
+            const oldPath = user.photo_celebration ? path.join("app/uploads", path.basename(user.photo_celebration)) : null;
+            if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+            user.photo_celebration = `/uploads/${req.files.photo_celebration[0].filename}`;
+        }
+
         if (email !== undefined) user.email = email;
         if (firstName !== undefined) user.firstName = firstName;
         if (lastName !== undefined) user.lastName = lastName;
         if (phone !== undefined) user.phone = phone;
+        if (licence !== undefined) user.licence = licence;
         if (isActive !== undefined) {
             user.isActive = isActive; 
             user.refreshToken = "";
+            user.password = null;
         }
 
         if (Array.isArray(rolesCategories)) {
@@ -107,7 +135,7 @@ const updateUserForAdmin = async (req, res) => {
         }
 
         await user.save({ transaction: t });
-        await redis.del('users:');
+        await redis.del('users:{}{}');
         await t.commit();
 
         res.status(200).json({
@@ -163,7 +191,7 @@ const updatePassword = async (req, res) => {
         const hashedPassword = await bcrypt.hash(newPassword, 10);
         user.password = hashedPassword;
         await user.save();
-        await redis.del('users:');
+        await redis.del('users:{}{}');
 
         res.status(200).json({
             status: 'success',
@@ -222,14 +250,39 @@ const getUser = async (req, res) => {
 
 const getUsers = async (req, res) => {
     try {
+        let { _role, _category } = req.query;
+
+        if (_role && !Array.isArray(_role)) {
+            _role = [_role];
+        }
+        if (_category && !Array.isArray(_category)) {
+            _category = [_category];
+        }
+
+        const whereUserRolesCategories = {};
+        if (_role && _role.length > 0) {
+            whereUserRolesCategories.roleId = { [Op.in]: _role };
+        }
+        if (_category && _category.length > 0) {
+            whereUserRolesCategories.categoryId = { [Op.in]: _category };
+        }
+
         const users = await models.Users.findAll({
             include: [
                 {
                     model: models.UserRolesCategories,
-                    attributes: ['roleId', 'categoryId']
+                    attributes: ['roleId', 'categoryId'],
+                    where: Object.keys(whereUserRolesCategories).length > 0 ? whereUserRolesCategories : undefined
                 }
             ]
         });
+
+        if (users.length === 0) {
+            return res.status(404).json({ 
+                status: 'error',
+                message: "Aucun utilisateur trouvé."
+            });
+        }
 
         res.status(200).json({ 
             status: 'success',
@@ -263,8 +316,18 @@ const deleteUser = async (req, res) => {
             });
         }
 
+        if (user.photo) {
+            const photoPath = path.join("app/uploads", path.basename(user.photo));
+            if (fs.existsSync(photoPath)) fs.unlinkSync(photoPath);
+        }
+
+        if (user.photo_celebration) {
+            const photoCelebrationPath = path.join("app/uploads", path.basename(user.photo_celebration));
+            if (fs.existsSync(photoCelebrationPath)) fs.unlinkSync(photoCelebrationPath);
+        }
+
         await user.destroy();
-        await redis.del('users:');
+        await redis.del('users:{}{}');
 
         res.status(200).json({
             status: 'success',
@@ -279,10 +342,21 @@ const deleteUser = async (req, res) => {
     }
 };
 
+const getFiles = (req, res) => {
+    const { filename } = req.params;
+    const filePath = path.resolve('app/uploads', filename);
+
+    if (!fs.existsSync(filePath)) {
+        return res.status(404).json({ status: 'error', message: 'Fichier non trouvé.' });
+    }
+    res.sendFile(filePath);
+};
+
 export default {
     updateUser,
     updateUserForAdmin,
     updatePassword,
+    getFiles,
     getUser,
     getUsers,
     deleteUser
