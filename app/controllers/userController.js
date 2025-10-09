@@ -308,6 +308,13 @@ const deleteUser = async (req, res) => {
             });
         }
 
+        if (userId == req.auth.userId) {
+            return res.status(400).json({
+                status: 'error',
+                message: "Un utilisateur ne peut pas supprimer son propre compte."
+            });
+        }
+
         const user = await models.Users.findByPk(userId);
         if (!user) {
             return res.status(404).json({
