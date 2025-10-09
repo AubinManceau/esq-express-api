@@ -5,6 +5,7 @@ import redis from '../config/redisClient.js';
 import { Op } from 'sequelize';
 import fs from 'fs';
 import path from 'path';
+import Categories from '../models/Categories.js';
 
 const updateUser = async (req, res) => {
     try {
@@ -116,7 +117,7 @@ const updateUserForAdmin = async (req, res) => {
                 if (!role) throw new Error(`Le rôle '${roleId}' n'existe pas`);
 
                 let category = null;
-                if ([1, 2].includes(roleId)) {
+                if ([1, 2].includes(Number(roleId))) {
                     if (!categoryId) throw new Error(`La catégorie est requise pour le rôle '${role.name}'`);
 
                     category = await models.Categories.findByPk(categoryId, { transaction: t });
@@ -133,7 +134,6 @@ const updateUserForAdmin = async (req, res) => {
                 }, { transaction: t });
             }
         }
-
         await user.save({ transaction: t });
         await redis.del('users:{}{}');
         await t.commit();
