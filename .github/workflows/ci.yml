@@ -28,7 +28,7 @@ jobs:
             docker compose up -d --build
             until docker compose exec db mysqladmin ping -h "localhost" --silent; do
               echo "Waiting for database connection..."
-              sleep 5
+              sleep 10
             done
             npm run migrate
             docker image prune -f
