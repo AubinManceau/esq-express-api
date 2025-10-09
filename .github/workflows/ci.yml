@@ -26,6 +26,6 @@ jobs:
             git pull origin master
             docker compose down
             docker compose up -d --build
-            sleep 10
+            sleep 30
             npm run migrate
             docker image prune -f
