@@ -26,6 +26,9 @@ jobs:
             git pull origin master
             docker compose down
             docker compose up -d --build
-            sleep 30
+            until docker compose exec db mysqladmin ping -h "localhost" --silent; do
+              echo "Waiting for database connection..."
+              sleep 5
+            done
             npm run migrate
             docker image prune -f
