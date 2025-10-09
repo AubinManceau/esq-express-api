@@ -47,10 +47,7 @@ services:
     env_file:
       - .env
     environment:
-      PMA_ARBITRARY: 1
-      PMA_HOSTS: db,db_test
-      PMA_USER: ${PMA_USER}
-      PMA_PASSWORD: ${PMA_PASSWORD}
+      PMA_HOSTS: db
     depends_on:
       - db
 
