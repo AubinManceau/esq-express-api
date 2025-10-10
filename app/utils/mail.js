@@ -1,6 +1,19 @@
 import nodemailer from 'nodemailer';
 import 'dotenv/config';
 
+const transporter = nodemailer.createTransport({
+    host: process.env.EMAIL_HOST,
+    port: process.env.EMAIL_PORT,
+    secure: false,
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+    },
+    pool: true,
+    maxConnections: 5,
+    maxMessages: 100
+});
+
 export const sendVerificationEmail = async (email, firstName, lastName, token) => {
     const mailSubject = "Bienvenue à l'ES Quelaines - Finalisez votre inscription";
     const mailContent = ({ firstName, lastName, token }) => `
@@ -36,16 +49,6 @@ export const sendVerificationEmail = async (email, firstName, lastName, token) =
             </p>
         </div>
     `;
-
-    const transporter = nodemailer.createTransport({
-        host: process.env.EMAIL_HOST,
-        port: process.env.EMAIL_PORT,
-        secure: false,
-        auth: {
-            user: process.env.EMAIL_USER,
-            pass: process.env.EMAIL_PASS
-        }
-    });
 
     const mailOptions = {
         from: process.env.EMAIL_FROM,
@@ -83,16 +86,6 @@ export const sendPasswordResetEmail = async (email, firstName, lastName, token) 
             </p>
         </div>
     `;
-
-    const transporter = nodemailer.createTransport({
-        host: process.env.EMAIL_HOST,
-        port: process.env.EMAIL_PORT,
-        secure: false,
-        auth: {
-            user: process.env.EMAIL_USER,
-            pass: process.env.EMAIL_PASS
-        }
-    });
 
     const mailOptions = {
         from: process.env.EMAIL_FROM,

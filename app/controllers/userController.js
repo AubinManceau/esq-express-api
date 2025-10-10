@@ -57,13 +57,6 @@ const updateUserForAdmin = async (req, res) => {
             });
         }
         
-        if (userId == adminId) {
-            await t.rollback();
-            return res.status(400).json({
-                status: 'error',
-                message: "Un administrateur ne peut pas modifier son propre compte via cette route."
-            });
-        }
         const { email, firstName, lastName, phone, isActive, rolesCategories, licence } = req.body;
 
         const user = await models.Users.findByPk(userId, { transaction: t });
@@ -98,42 +91,51 @@ const updateUserForAdmin = async (req, res) => {
             user.photo_celebration = `/uploads/${req.files.photo_celebration[0].filename}`;
         }
 
-        if (email !== undefined) user.email = email;
-        if (firstName !== undefined) user.firstName = firstName;
-        if (lastName !== undefined) user.lastName = lastName;
-        if (phone !== undefined) user.phone = phone;
-        if (licence !== undefined) user.licence = licence;
-        if (isActive !== undefined) {
-            user.isActive = isActive; 
-            user.refreshToken = "";
-            user.password = null;
-        }
-
-        if (Array.isArray(rolesCategories)) {
-            await models.UserRolesCategories.destroy({ where: { userId }, transaction: t });
-
-            for (const { roleId, categoryId } of rolesCategories) {
-                const role = await models.Roles.findByPk(roleId, { transaction: t });
-                if (!role) throw new Error(`Le rôle '${roleId}' n'existe pas`);
-
-                let category = null;
-                if ([1, 2].includes(Number(roleId))) {
-                    if (!categoryId) throw new Error(`La catégorie est requise pour le rôle '${role.name}'`);
-
-                    category = await models.Categories.findByPk(categoryId, { transaction: t });
-                    if (!category) throw new Error(`La catégorie '${categoryId}' n'existe pas`);
-
-                    const trainings = await models.Trainings.findAll({ where: { categoryId }, transaction: t });
-                    await user.setTrainings(trainings, { transaction: t });
-                }
-
-                await models.UserRolesCategories.create({
-                    userId,
-                    roleId,
-                    categoryId: category ? category.id : null
-                }, { transaction: t });
+        if (userId != adminId) {
+            if (email !== undefined) user.email = email;
+            if (firstName !== undefined) user.firstName = firstName;
+            if (lastName !== undefined) user.lastName = lastName;
+            if (phone !== undefined) user.phone = phone;
+            if (licence !== undefined) user.licence = licence;
+            if (isActive !== undefined) {
+                user.isActive = isActive; 
+                user.refreshToken = "";
+                user.password = null;
             }
+    
+            if (Array.isArray(rolesCategories)) {
+                await models.UserRolesCategories.destroy({ where: { userId }, transaction: t });
+    
+                for (const { roleId, categoryId } of rolesCategories) {
+                    const role = await models.Roles.findByPk(roleId, { transaction: t });
+                    if (!role) throw new Error(`Le rôle '${roleId}' n'existe pas`);
+    
+                    let category = null;
+                    if ([1, 2].includes(Number(roleId))) {
+                        if (!categoryId) throw new Error(`La catégorie est requise pour le rôle '${role.name}'`);
+    
+                        category = await models.Categories.findByPk(categoryId, { transaction: t });
+                        if (!category) throw new Error(`La catégorie '${categoryId}' n'existe pas`);
+    
+                        const trainings = await models.Trainings.findAll({ where: { categoryId }, transaction: t });
+                        await user.setTrainings(trainings, { transaction: t });
+                    }
+    
+                    await models.UserRolesCategories.create({
+                        userId,
+                        roleId,
+                        categoryId: category ? category.id : null
+                    }, { transaction: t });
+                }
+            }
+        } else if (userId == adminId && (email !== undefined || firstName !== undefined || lastName !== undefined || phone !== undefined || isActive !== undefined || Array.isArray(rolesCategories))) {
+            await t.rollback();
+            return res.status(403).json({
+                status: 'error',
+                message: "Un administrateur ne peut pas modifier son propre compte via cette route."
+            });
         }
+        
         await user.save({ transaction: t });
         await redis.del('users:{}{}');
         await t.commit();
