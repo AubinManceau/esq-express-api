@@ -13,6 +13,10 @@ export default {
         type: Sequelize.STRING(50),
         allowNull: false,
       },
+      division: {
+        type: Sequelize.STRING(50),
+        allowNull: false,
+      },
       categoryId: {
         type: Sequelize.INTEGER,
         allowNull: false,

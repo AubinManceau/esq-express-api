@@ -5,13 +5,13 @@ import { Op } from 'sequelize';
 const createTeam = async (req, res) => {
     const t = await models.sequelize.transaction();
     try {
-        const { name, categoryId, userCoachIds = [] } = req.body;
+        const { name, division, categoryId, userCoachIds = [] } = req.body;
 
-        if (!name || !categoryId || userCoachIds.length === 0) {
+        if (!name || !division || !categoryId || userCoachIds.length === 0) {
             await t.rollback();
             return res.status(400).json({
                 status: 'error',
-                message: 'Le nom, la catégorie et le coach sont requis pour créer une équipe.',
+                message: 'Le nom, la division, la catégorie et le coach sont requis pour créer une équipe.',
             });
         }
 
@@ -40,7 +40,7 @@ const createTeam = async (req, res) => {
             });
         }
 
-        const team = await models.Teams.create({ name, categoryId }, { transaction: t });
+        const team = await models.Teams.create({ name, division, categoryId }, { transaction: t });
         await team.addUsers(coaches, { transaction: t });
         await redis.del('teams:{}{}');
         await t.commit();
@@ -73,7 +73,7 @@ const updateTeam = async (req, res) => {
     const t = await models.sequelize.transaction();
     try {
         const id = req.params.id;
-        const { name, categoryId, userCoachIds = [] } = req.body;
+        const { name, division, categoryId, userCoachIds = [] } = req.body;
 
         const team = await models.Teams.findByPk(id);
         if (!team) {
@@ -86,6 +86,7 @@ const updateTeam = async (req, res) => {
 
         let teamCategoryId = categoryId;
         if (name !== undefined) team.name = name;
+        if (division !== undefined) team.division = division;
         if (teamCategoryId !== undefined) {
             const category = await models.Categories.findByPk(teamCategoryId);
             if (!category) {
