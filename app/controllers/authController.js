@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import 'dotenv/config';
 import {sendVerificationEmail, sendPasswordResetEmail} from '../utils/mail.js';
 import redis from '../config/redisClient.js';
+import { Op } from 'sequelize';
 
 const signup = async (req, res) => {
     const t = await models.sequelize.transaction();
@@ -668,51 +669,74 @@ const getProfile = async (req, res) => {
     }
 };
 
-const bulkSignup = async (req, res) => {
+export const bulkSignup = async (req, res) => {
     const t = await models.sequelize.transaction();
 
     try {
         const users = req.body.users;
         if (!Array.isArray(users) || users.length === 0) {
             await t.rollback();
-            return res.status(400).json({ status: 'error', message: 'Aucun utilisateur à créer.' });
+            return res.status(400).json({ status: "error", message: "Aucun utilisateur à créer." });
         }
 
         const emails = users.map(u => u.email).filter(Boolean);
-        const existingUsers = await models.Users.findAll({ where: { email: emails }, transaction: t });
+        const licences = users.map(u => u.licence).filter(Boolean);
+
+        const existingUsers = await models.Users.findAll({
+            where: {
+                [Op.or]: [{ email: emails }, { licence: licences }]
+            },
+            transaction: t
+        });
+
         const existingEmails = new Set(existingUsers.map(u => u.email));
+        const existingLicences = new Set(existingUsers.map(u => u.licence));
 
         const validUsers = [];
         const results = [];
 
         for (const u of users) {
             const { firstName, lastName, email, phone, rolesCategories, licence } = u;
+
             if (!email || !Array.isArray(rolesCategories) || rolesCategories.length === 0 || !firstName || !lastName) {
-                results.push({ email: email || null, status: 'error', message: 'Nom, Prénom, Email et au moins un rôle sont requis.' });
+                results.push({ email: email || null, status: "error", message: "Nom, Prénom, Email et au moins un rôle sont requis." });
                 continue;
             }
             if (existingEmails.has(email)) {
-                results.push({ email, status: 'error', message: 'Utilisateur déjà existant.' });
+                results.push({ email, status: "error", message: "Utilisateur déjà existant." });
                 continue;
             }
+            if (licence && existingLicences.has(licence)) {
+                results.push({ email, status: "error", message: `Licence '${licence}' déjà utilisée.` });
+                continue;
+            }
+
             validUsers.push({ firstName, lastName, email, phone: phone || null, licence: licence || null });
         }
 
         if (validUsers.length === 0) {
             await t.rollback();
-            return res.status(400).json({ status: 'error', message: 'Aucun utilisateur valide à créer.', results });
+            return res.status(400).json({ status: "error", message: "Aucun utilisateur valide à créer.", results });
         }
 
         const createdUsers = await models.Users.bulkCreate(validUsers, { transaction: t, returning: true });
 
         const userRolesCategoriesData = [];
         const trainingRelations = [];
-
         const categoryIds = new Set();
-        users.forEach(u => u.rolesCategories.forEach(rc => { if ([1,2].includes(Number(rc.roleId)) && rc.categoryId) categoryIds.add(rc.categoryId); }));
+
+        users.forEach(u => {
+            u.rolesCategories.forEach(rc => {
+                if ([1, 2].includes(Number(rc.roleId)) && rc.categoryId) categoryIds.add(rc.categoryId);
+            });
+        });
+
         const trainingsByCategory = {};
         if (categoryIds.size > 0) {
-            const trainings = await models.Trainings.findAll({ where: { categoryId: Array.from(categoryIds) }, transaction: t });
+            const trainings = await models.Trainings.findAll({
+                where: { categoryId: Array.from(categoryIds) },
+                transaction: t
+            });
             trainings.forEach(tr => {
                 if (!trainingsByCategory[tr.categoryId]) trainingsByCategory[tr.categoryId] = [];
                 trainingsByCategory[tr.categoryId].push(tr.id);
@@ -728,7 +752,7 @@ const bulkSignup = async (req, res) => {
                     categoryId: categoryId ? Number(categoryId) : null
                 });
 
-                if ([1,2].includes(Number(roleId)) && categoryId && trainingsByCategory[categoryId]) {
+                if ([1, 2].includes(Number(roleId)) && categoryId && trainingsByCategory[categoryId]) {
                     trainingsByCategory[categoryId].forEach(trainingId => {
                         trainingRelations.push({ userId: user.id, trainingId });
                     });
@@ -740,26 +764,30 @@ const bulkSignup = async (req, res) => {
             await models.UserRolesCategories.bulkCreate(userRolesCategoriesData, { transaction: t });
         }
         if (trainingRelations.length > 0) {
-            await models.UserTrainings.bulkCreate(trainingRelations, { transaction: t });
+            await models.TrainingUsersStatus.bulkCreate(trainingRelations, { transaction: t });
         }
 
-        await Promise.all(createdUsers.map(async (user) => {
-            const token = jwt.sign({ userId: user.id }, process.env.SECRET_KEY_SIGNUP, { expiresIn: '48h' });
-            sendVerificationEmail(user.email, user.firstName, user.lastName, token).catch(err => console.error("Erreur email :", err));
-            results.push({ email: user.email, status: 'success', message: 'Utilisateur créé', data: { userId: user.id, token } });
-        }));
-
-        await redis.del('users:{}{}');
+        await redis.del("users:{}{}");
         await t.commit();
 
-        return res.status(207).json({ status: 'finished', results });
+        for (const user of createdUsers) {
+            const token = jwt.sign({ userId: user.id }, process.env.SECRET_KEY_SIGNUP, { expiresIn: "48h" });
+            try {
+                await sendVerificationEmail(user.email, user.firstName, user.lastName, token);
+                results.push({ email: user.email, status: "success", message: "Utilisateur créé", data: { userId: user.id, token } });
+            } catch (err) {
+                console.error(`Erreur email pour ${user.email}:`, err);
+                results.push({ email: user.email, status: "error", message: "Utilisateur créé, mais erreur d’envoi d’email." });
+            }
+        }
+
+        return res.status(207).json({ status: "finished", results });
 
     } catch (error) {
         await t.rollback();
-        return res.status(500).json({ status: 'error', message: error.message });
+        return res.status(500).json({ status: "error", message: error.message });
     }
 };
-
 
 export default {
     signup,
