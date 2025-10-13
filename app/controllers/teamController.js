@@ -185,32 +185,36 @@ const getAllTeams = async (req, res) => {
             whereCategory.id = { [Op.in]: _category };
         }
 
-        const teams = await models.Teams.findAll({
+        const categories = await models.Categories.findAll({
+            where: Object.keys(whereCategory).length ? whereCategory : undefined,
+            attributes: ['id', 'name'],
             include: [
-                { 
-                    model: models.Categories, 
+                {
+                    model: models.Teams,
+                    required: false,
                     attributes: ['id', 'name'],
-                    where: Object.keys(whereCategory).length ? whereCategory : undefined
-                },
-                { 
-                    model: models.Users,
-                    attributes: ['id', 'firstName', 'lastName', 'email', 'phone'],
-                    through: { attributes: [] }
+                    include: [
+                        {
+                            model: models.Users,
+                            attributes: ['id', 'firstName', 'lastName', 'email', 'phone'],
+                            through: { attributes: [] },
+                        }
+                    ]
                 }
             ]
         });
 
-        if (teams.length === 0) {
+        if (categories.length === 0) {
             return res.status(404).json({
                 status: 'error',
-                message: 'Aucune équipe trouvée.',
+                message: 'Aucune catégorie trouvée.',
             });
         }
 
         return res.status(200).json({
             status: 'success',
-            message: 'Équipes récupérées avec succès.',
-            data: { teams }
+            message: 'Équipes récupérées avec succès par catégorie.',
+            data: categories
         });
     } catch (error) {
         return res.status(500).json({
