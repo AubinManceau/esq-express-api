@@ -192,7 +192,7 @@ const getAllTeams = async (req, res) => {
                 {
                     model: models.Teams,
                     required: false,
-                    attributes: ['id', 'name'],
+                    attributes: ['id', 'name', 'division'],
                     include: [
                         {
                             model: models.Users,
@@ -229,7 +229,7 @@ const getOneTeam = async (req, res) => {
         const id = req.params.id;
         const team = await models.Teams.findByPk(id, {
             include: [
-                { model: models.Categories, attributes: ['id', 'name'] },
+                { model: models.Categories, attributes: ['id', 'name', 'division'] },
                 { model: models.Users, attributes: ['id', 'firstName', 'lastName', 'email', 'phone'], through: { attributes: [] } }
             ]
         });
