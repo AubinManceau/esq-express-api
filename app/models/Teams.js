@@ -6,6 +6,10 @@ export default (sequelize) => {
       type: DataTypes.STRING(50),
       allowNull: false,
     },
+    division: {
+      type: DataTypes.STRING(50),
+      allowNull: false,
+    },
     categoryId: {
       type: DataTypes.INTEGER,
       allowNull: false,

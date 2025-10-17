@@ -5,13 +5,13 @@ import { Op } from 'sequelize';
 const createTeam = async (req, res) => {
     const t = await models.sequelize.transaction();
     try {
-        const { name, categoryId, userCoachIds = [] } = req.body;
+        const { name, division, categoryId, userCoachIds = [] } = req.body;
 
-        if (!name || !categoryId || userCoachIds.length === 0) {
+        if (!name || !division || !categoryId || userCoachIds.length === 0) {
             await t.rollback();
             return res.status(400).json({
                 status: 'error',
-                message: 'Le nom, la catégorie et le coach sont requis pour créer une équipe.',
+                message: 'Le nom, la division, la catégorie et le coach sont requis pour créer une équipe.',
             });
         }
 
@@ -40,7 +40,7 @@ const createTeam = async (req, res) => {
             });
         }
 
-        const team = await models.Teams.create({ name, categoryId }, { transaction: t });
+        const team = await models.Teams.create({ name, division, categoryId }, { transaction: t });
         await team.addUsers(coaches, { transaction: t });
         await redis.del('teams:{}{}');
         await t.commit();
@@ -73,7 +73,7 @@ const updateTeam = async (req, res) => {
     const t = await models.sequelize.transaction();
     try {
         const id = req.params.id;
-        const { name, categoryId, userCoachIds = [] } = req.body;
+        const { name, division, categoryId, userCoachIds = [] } = req.body;
 
         const team = await models.Teams.findByPk(id);
         if (!team) {
@@ -86,6 +86,7 @@ const updateTeam = async (req, res) => {
 
         let teamCategoryId = categoryId;
         if (name !== undefined) team.name = name;
+        if (division !== undefined) team.division = division;
         if (teamCategoryId !== undefined) {
             const category = await models.Categories.findByPk(teamCategoryId);
             if (!category) {
@@ -184,32 +185,36 @@ const getAllTeams = async (req, res) => {
             whereCategory.id = { [Op.in]: _category };
         }
 
-        const teams = await models.Teams.findAll({
+        const categories = await models.Categories.findAll({
+            where: Object.keys(whereCategory).length ? whereCategory : undefined,
+            attributes: ['id', 'name'],
             include: [
-                { 
-                    model: models.Categories, 
-                    attributes: ['id', 'name'],
-                    where: Object.keys(whereCategory).length ? whereCategory : undefined
-                },
-                { 
-                    model: models.Users,
-                    attributes: ['id', 'firstName', 'lastName', 'email', 'phone'],
-                    through: { attributes: [] }
+                {
+                    model: models.Teams,
+                    required: false,
+                    attributes: ['id', 'name', 'division'],
+                    include: [
+                        {
+                            model: models.Users,
+                            attributes: ['id', 'firstName', 'lastName', 'email', 'phone'],
+                            through: { attributes: [] },
+                        }
+                    ]
                 }
             ]
         });
 
-        if (teams.length === 0) {
+        if (categories.length === 0) {
             return res.status(404).json({
                 status: 'error',
-                message: 'Aucune équipe trouvée.',
+                message: 'Aucune catégorie trouvée.',
             });
         }
 
         return res.status(200).json({
             status: 'success',
-            message: 'Équipes récupérées avec succès.',
-            data: { teams }
+            message: 'Équipes récupérées avec succès par catégorie.',
+            data: categories
         });
     } catch (error) {
         return res.status(500).json({
@@ -224,7 +229,7 @@ const getOneTeam = async (req, res) => {
         const id = req.params.id;
         const team = await models.Teams.findByPk(id, {
             include: [
-                { model: models.Categories, attributes: ['id', 'name'] },
+                { model: models.Categories, attributes: ['id', 'name', 'division'] },
                 { model: models.Users, attributes: ['id', 'firstName', 'lastName', 'email', 'phone'], through: { attributes: [] } }
             ]
         });
