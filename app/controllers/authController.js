@@ -306,12 +306,16 @@ const login = async (req, res) => {
             res.cookie('token', accessToken, {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production',
-                maxAge: 15 * 60 * 1000 // 15 minutes
+                sameSite: 'strict',
+                path: '/',
+                maxAge: 15 * 60 * 1000
             });
             res.cookie('refreshToken', refreshToken, {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production',
-                maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+                sameSite: 'strict',
+                path: '/',
+                maxAge: 7 * 24 * 60 * 60 * 1000
             });
 
             return res.status(200).json({
@@ -403,12 +407,16 @@ const refreshAccessToken = async (req, res) => {
             res.cookie('token', newAccessToken, {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production',
-                maxAge: 15 * 60 * 1000 // 15 minutes
+                sameSite: 'strict',
+                path: '/',
+                maxAge: 15 * 60 * 1000
             });
             res.cookie('refreshToken', newRefreshToken, {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production',
-                maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+                sameSite: 'strict',
+                path: '/',
+                maxAge: 7 * 24 * 60 * 60 * 1000
             });
 
             return res.status(200).json({
@@ -477,10 +485,14 @@ const logout = async (req, res) => {
         res.clearCookie("token", {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
+            sameSite: 'strict',
+            path: '/',
         });
         res.clearCookie("refreshToken", {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
+            sameSite: 'strict',
+            path: '/',
         });
 
         // Suppression du refresh token en base
@@ -783,6 +795,82 @@ export const bulkSignup = async (req, res) => {
     }
 };
 
+export const verifyToken = async (req, res) => {
+    try {
+        const accessToken = req.cookies.token
+        const refreshToken = req.cookies.refreshToken
+
+        if (!accessToken) {
+            return res.status(401).json({ 
+                status: 'error', 
+                message: 'Token manquant.' 
+            })
+        }
+
+        try {
+            const decoded = jwt.verify(accessToken, process.env.SECRET_KEY_ACCESS_TOKEN)
+            return res.status(200).json({
+                status: 'success',
+                message: 'Token valide.',
+                data: { userId: decoded.userId, roles: decoded.roles },
+            })
+        } catch (err) {
+            if (err.name === 'TokenExpiredError') {
+                if (!refreshToken) {
+                    return res.status(401).json({ status: 'error', message: 'Refresh token manquant.' })
+                }
+
+                try {
+                    const decodedRefresh = jwt.verify(refreshToken, process.env.SECRET_KEY_REFRESH_TOKEN)
+
+                    const newAccessToken = jwt.sign(
+                        {
+                            userId: decodedRefresh.userId,
+                            roles: decodedRefresh.roles
+                        },
+                        process.env.SECRET_KEY_ACCESS_TOKEN,
+                        { expiresIn: '15min' }
+                    );
+
+                    const newRefreshToken = jwt.sign(
+                        { userId: decodedRefresh.userId },
+                        process.env.SECRET_KEY_REFRESH_TOKEN,
+                        { expiresIn: '7d' }
+                    );
+
+                    res.cookie('token', newAccessToken, {
+                        httpOnly: true,
+                        secure: process.env.NODE_ENV === 'production',
+                        sameSite: 'strict',
+                        path: '/',
+                        maxAge: 15 * 60 * 1000, 
+                    });
+
+                    res.cookie('refreshToken', newRefreshToken, {
+                        httpOnly: true,
+                        secure: process.env.NODE_ENV === 'production',
+                        sameSite: 'strict',
+                        path: '/',
+                        maxAge: 7 * 24 * 60 * 60 * 1000, 
+                    });
+
+                    return res.status(200).json({
+                        status: 'success',
+                        message: 'Nouveau token généré.',
+                        data: { userId: decodedRefresh.userId, roles: decodedRefresh.roles },
+                    })
+                } catch (refreshError) {
+                    return res.status(401).json({ status: 'error', message: 'Refresh token invalide ou expiré.' })
+                }
+            }
+
+            return res.status(401).json({ status: 'error', message: 'Token invalide.' })
+        }
+    } catch (error) {
+            return res.status(500).json({ status: 'error', message: 'Erreur interne du serveur.' })
+    }
+}
+
 export default {
     signup,
     bulkSignup,
@@ -793,5 +881,6 @@ export default {
     logout,
     resetPassword,
     forgotPassword,
-    getProfile
+    getProfile,
+    verifyToken
 };
