@@ -756,4 +756,5 @@ router.post('/forgot-password', authCtrl.forgotPassword);
  */
 router.post('/reset-password', authCtrl.resetPassword);
 router.get('/profile', auth, authCtrl.getProfile);
+router.post('/verify-token', authCtrl.verifyToken);
 export default router;
