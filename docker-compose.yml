@@ -6,8 +6,8 @@ services:
       args:
         NODE_ENV: ${NODE_ENV}
     container_name: api_esq
-    ports:
-      - "${PORT}:3000"
+    networks:
+      - traefik_net
     env_file:
       - .env
     environment:
@@ -23,6 +23,11 @@ services:
       then npx nodemon --legacy-watch server.js;
       else node server.js;
       fi"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.api_esq.rule=Host(`${API_DOMAIN}`)"
+      - "traefik.http.routers.api_esq.entrypoints=websecure"
+      - "traefik.http.routers.api_esq.tls.certresolver=resolver"
 
   db:
     image: mariadb:10.11
@@ -33,29 +38,34 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
       MYSQL_DATABASE: ${DB_NAME}
-    ports:
-      - "3306:3306"
     volumes:
       - db_data:/var/lib/mysql
+    networks:
+      - traefik_net
 
   phpmyadmin:
     image: phpmyadmin/phpmyadmin
     container_name: pma_esq
     restart: always
-    ports:
-      - "8080:80"
+    networks:
+      - traefik_net
     env_file:
       - .env
     environment:
       PMA_HOST: db
     depends_on:
       - db
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.pma_esq.rule=Host(`${PMA_DOMAIN}`)"
+      - "traefik.http.routers.pma_esq.entrypoints=websecure"
+      - "traefik.http.routers.pma_esq.tls.certresolver=resolver"
 
   redis:
     image: redis:7-alpine
     container_name: redis_esq
-    ports:
-      - "6379:6379"
+    networks:
+      - traefik_net
     env_file:
       - .env
     command: ["redis-server", "--appendonly", "yes", "--save", "60", "1000", "--requirepass", "${REDIS_PASSWORD}"]
@@ -66,3 +76,7 @@ services:
 volumes:
   db_data:
   redis_data:
+
+networks:
+  traefik_net:
+    external: true
