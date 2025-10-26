@@ -23,7 +23,7 @@ const app = express();
 app.use(helmet());
 app.use(cookieParser());
 app.use(cors({
-  origin: ['http://localhost:4000', 'http://91.134.241.224:4000'],
+  origin: 'https://web.aubin-manceau.fr',
   methods: ['GET','POST','PUT','DELETE','PATCH','OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'x-client-type'],
   credentials: true,
