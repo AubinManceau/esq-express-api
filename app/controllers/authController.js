@@ -797,79 +797,143 @@ export const bulkSignup = async (req, res) => {
 
 export const verifyToken = async (req, res) => {
     try {
-        const accessToken = req.cookies.token
-        const refreshToken = req.cookies.refreshToken
+        const accessToken = req.cookies.token;
+        const refreshToken = req.cookies.refreshToken;
 
+        // Vérifier la présence du token d'accès
         if (!accessToken) {
             return res.status(401).json({ 
                 status: 'error', 
                 message: 'Token manquant.' 
-            })
+            });
         }
 
         try {
-            const decoded = jwt.verify(accessToken, process.env.SECRET_KEY_ACCESS_TOKEN)
+            // Vérifier la validité du token d'accès
+            const decoded = jwt.verify(accessToken, process.env.SECRET_KEY_ACCESS_TOKEN);
+            
             return res.status(200).json({
                 status: 'success',
                 message: 'Token valide.',
-                data: { userId: decoded.userId, roles: decoded.roles },
-            })
+                data: { 
+                    userId: decoded.userId, 
+                    roles: decoded.roles 
+                },
+            });
         } catch (err) {
+            // Si le token est expiré, tenter de le rafraîchir
             if (err.name === 'TokenExpiredError') {
                 if (!refreshToken) {
-                    return res.status(401).json({ status: 'error', message: 'Refresh token manquant.' })
+                    return res.status(401).json({ 
+                        status: 'error', 
+                        message: 'Refresh token manquant.' 
+                    });
                 }
 
                 try {
-                    const decodedRefresh = jwt.verify(refreshToken, process.env.SECRET_KEY_REFRESH_TOKEN)
+                    // Vérifier le refresh token
+                    const decodedRefresh = jwt.verify(refreshToken, process.env.SECRET_KEY_REFRESH_TOKEN);
 
+                    // Récupérer l'utilisateur avec ses rôles depuis la base de données
+                    const user = await models.Users.findOne({
+                        where: { 
+                            id: decodedRefresh.userId,
+                            refreshToken: refreshToken, // Vérifier que le refresh token correspond
+                            isActive: true
+                        },
+                        include: [
+                            {
+                                model: models.UserRolesCategories,
+                                include: [
+                                    { model: models.Roles },
+                                    { model: models.Categories }
+                                ]
+                            }
+                        ]
+                    });
+
+                    if (!user) {
+                        return res.status(401).json({ 
+                            status: 'error', 
+                            message: 'Utilisateur introuvable ou token invalide.' 
+                        });
+                    }
+
+                    // Préparer les rôles pour le nouveau token
+                    const roles = user.UserRolesCategories ? user.UserRolesCategories.map(urc => ({
+                        roleId: urc.roleId,
+                        categoryId: urc.categoryId
+                    })) : [];
+
+                    // Générer un nouveau access token
                     const newAccessToken = jwt.sign(
                         {
-                            userId: decodedRefresh.userId,
-                            roles: decodedRefresh.roles
+                            userId: user.id,
+                            roles: roles
                         },
                         process.env.SECRET_KEY_ACCESS_TOKEN,
                         { expiresIn: '15min' }
                     );
 
+                    // Générer un nouveau refresh token
                     const newRefreshToken = jwt.sign(
-                        { userId: decodedRefresh.userId },
+                        { userId: user.id },
                         process.env.SECRET_KEY_REFRESH_TOKEN,
                         { expiresIn: '7d' }
                     );
 
+                    // Mettre à jour le refresh token en base de données
+                    user.refreshToken = newRefreshToken;
+                    await user.save();
+
+                    // Définir les nouveaux cookies
                     res.cookie('token', newAccessToken, {
                         httpOnly: true,
                         secure: process.env.NODE_ENV === 'production',
-                        sameSite: 'strict',
+                        sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
                         path: '/',
-                        maxAge: 15 * 60 * 1000, 
+                        maxAge: 15 * 60 * 1000, // 15 minutes
                     });
 
                     res.cookie('refreshToken', newRefreshToken, {
                         httpOnly: true,
                         secure: process.env.NODE_ENV === 'production',
-                        sameSite: 'strict',
+                        sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
                         path: '/',
-                        maxAge: 7 * 24 * 60 * 60 * 1000, 
+                        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 jours
                     });
 
                     return res.status(200).json({
                         status: 'success',
-                        message: 'Nouveau token généré.',
-                        data: { userId: decodedRefresh.userId, roles: decodedRefresh.roles },
-                    })
+                        message: 'Token rafraîchi avec succès.',
+                        data: { 
+                            userId: user.id, 
+                            roles: roles 
+                        },
+                    });
                 } catch (refreshError) {
-                    return res.status(401).json({ status: 'error', message: 'Refresh token invalide ou expiré.' })
+                    console.error('Erreur lors du refresh du token:', refreshError);
+                    return res.status(401).json({ 
+                        status: 'error', 
+                        message: 'Refresh token invalide ou expiré.' 
+                    });
                 }
             }
 
-            return res.status(401).json({ status: 'error', message: 'Token invalide.' })
+            // Autres erreurs de token (token malformé, signature invalide, etc.)
+            return res.status(401).json({ 
+                status: 'error', 
+                message: 'Token invalide.' 
+            });
         }
     } catch (error) {
-            return res.status(500).json({ status: 'error', message: 'Erreur interne du serveur.' })
+        console.error('Erreur verify-token:', error);
+        return res.status(500).json({ 
+            status: 'error', 
+            message: 'Erreur interne du serveur.' 
+        });
     }
-}
+};
 
 export default {
     signup,
