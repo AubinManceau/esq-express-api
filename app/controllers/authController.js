@@ -306,15 +306,13 @@ const login = async (req, res) => {
             res.cookie('token', accessToken, {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production',
-                sameSite: 'strict',
-                path: '/',
+                sameSite: 'none',
                 maxAge: 15 * 60 * 1000
             });
             res.cookie('refreshToken', refreshToken, {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production',
-                sameSite: 'strict',
-                path: '/',
+                sameSite: 'none',
                 maxAge: 7 * 24 * 60 * 60 * 1000
             });
 
@@ -407,15 +405,13 @@ const refreshAccessToken = async (req, res) => {
             res.cookie('token', newAccessToken, {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production',
-                sameSite: 'strict',
-                path: '/',
+                sameSite: 'none',
                 maxAge: 15 * 60 * 1000
             });
             res.cookie('refreshToken', newRefreshToken, {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production',
-                sameSite: 'strict',
-                path: '/',
+                sameSite: 'none',
                 maxAge: 7 * 24 * 60 * 60 * 1000
             });
 
@@ -485,14 +481,12 @@ const logout = async (req, res) => {
         res.clearCookie("token", {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
-            sameSite: 'strict',
-            path: '/',
+            sameSite: 'none',
         });
         res.clearCookie("refreshToken", {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
-            sameSite: 'strict',
-            path: '/',
+            sameSite: 'none',
         });
 
         // Suppression du refresh token en base
@@ -795,146 +789,6 @@ export const bulkSignup = async (req, res) => {
     }
 };
 
-export const verifyToken = async (req, res) => {
-    try {
-        const accessToken = req.cookies.token;
-        const refreshToken = req.cookies.refreshToken;
-
-        // Vérifier la présence du token d'accès
-        if (!accessToken) {
-            return res.status(401).json({ 
-                status: 'error', 
-                message: 'Token manquant.' 
-            });
-        }
-
-        try {
-            // Vérifier la validité du token d'accès
-            const decoded = jwt.verify(accessToken, process.env.SECRET_KEY_ACCESS_TOKEN);
-            
-            return res.status(200).json({
-                status: 'success',
-                message: 'Token valide.',
-                data: { 
-                    userId: decoded.userId, 
-                    roles: decoded.roles 
-                },
-            });
-        } catch (err) {
-            // Si le token est expiré, tenter de le rafraîchir
-            if (err.name === 'TokenExpiredError') {
-                if (!refreshToken) {
-                    return res.status(401).json({ 
-                        status: 'error', 
-                        message: 'Refresh token manquant.' 
-                    });
-                }
-
-                try {
-                    // Vérifier le refresh token
-                    const decodedRefresh = jwt.verify(refreshToken, process.env.SECRET_KEY_REFRESH_TOKEN);
-
-                    // Récupérer l'utilisateur avec ses rôles depuis la base de données
-                    const user = await models.Users.findOne({
-                        where: { 
-                            id: decodedRefresh.userId,
-                            refreshToken: refreshToken, // Vérifier que le refresh token correspond
-                            isActive: true
-                        },
-                        include: [
-                            {
-                                model: models.UserRolesCategories,
-                                include: [
-                                    { model: models.Roles },
-                                    { model: models.Categories }
-                                ]
-                            }
-                        ]
-                    });
-
-                    if (!user) {
-                        return res.status(401).json({ 
-                            status: 'error', 
-                            message: 'Utilisateur introuvable ou token invalide.' 
-                        });
-                    }
-
-                    // Préparer les rôles pour le nouveau token
-                    const roles = user.UserRolesCategories ? user.UserRolesCategories.map(urc => ({
-                        roleId: urc.roleId,
-                        categoryId: urc.categoryId
-                    })) : [];
-
-                    // Générer un nouveau access token
-                    const newAccessToken = jwt.sign(
-                        {
-                            userId: user.id,
-                            roles: roles
-                        },
-                        process.env.SECRET_KEY_ACCESS_TOKEN,
-                        { expiresIn: '15min' }
-                    );
-
-                    // Générer un nouveau refresh token
-                    const newRefreshToken = jwt.sign(
-                        { userId: user.id },
-                        process.env.SECRET_KEY_REFRESH_TOKEN,
-                        { expiresIn: '7d' }
-                    );
-
-                    // Mettre à jour le refresh token en base de données
-                    user.refreshToken = newRefreshToken;
-                    await user.save();
-
-                    // Définir les nouveaux cookies
-                    res.cookie('token', newAccessToken, {
-                        httpOnly: true,
-                        secure: process.env.NODE_ENV === 'production',
-                        sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
-                        path: '/',
-                        maxAge: 15 * 60 * 1000, // 15 minutes
-                    });
-
-                    res.cookie('refreshToken', newRefreshToken, {
-                        httpOnly: true,
-                        secure: process.env.NODE_ENV === 'production',
-                        sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
-                        path: '/',
-                        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 jours
-                    });
-
-                    return res.status(200).json({
-                        status: 'success',
-                        message: 'Token rafraîchi avec succès.',
-                        data: { 
-                            userId: user.id, 
-                            roles: roles 
-                        },
-                    });
-                } catch (refreshError) {
-                    console.error('Erreur lors du refresh du token:', refreshError);
-                    return res.status(401).json({ 
-                        status: 'error', 
-                        message: 'Refresh token invalide ou expiré.' 
-                    });
-                }
-            }
-
-            // Autres erreurs de token (token malformé, signature invalide, etc.)
-            return res.status(401).json({ 
-                status: 'error', 
-                message: 'Token invalide.' 
-            });
-        }
-    } catch (error) {
-        console.error('Erreur verify-token:', error);
-        return res.status(500).json({ 
-            status: 'error', 
-            message: 'Erreur interne du serveur.' 
-        });
-    }
-};
-
 export default {
     signup,
     bulkSignup,
@@ -946,5 +800,4 @@ export default {
     resetPassword,
     forgotPassword,
     getProfile,
-    verifyToken
 };
