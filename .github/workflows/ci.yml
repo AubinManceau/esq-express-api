@@ -8,7 +8,6 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -20,39 +19,17 @@ jobs:
           username: ${{ secrets.SERVER_USERNAME }}
           password: ${{ secrets.SERVER_PASSWORD }}
           port: 22
-          script_stop: true
           script: |
             export NVM_DIR="$HOME/.nvm"
             [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-            echo "---- 🚀 Starting deployment ----"
-
             cd ${{ secrets.PROJECT_PATH }}
-
-            echo "---- 🧹 Resetting git repo ----"
             git fetch origin master
             git reset --hard origin/master
-
-            echo "---- 🧱 Rebuilding Docker containers ----"
-            docker compose down --remove-orphans
-            docker compose pull
-            docker compose build --no-cache
-            docker compose up -d
-
-            echo "---- ⏳ Waiting for DB to be ready ----"
-            until docker compose exec -T db sh -c "mysqladmin ping -h localhost -u root -p${DB_PASSWORD} --silent" > /dev/null 2>&1; do
-              echo '⏳ Waiting for database connection...'
-              sleep 5
+            docker compose down
+            docker compose up -d --build
+            until docker compose exec db mysqladmin ping -h "localhost" --silent; do
+              echo "Waiting for database connection..."
+              sleep 10
             done
-
-            echo "✅ Database is ready!"
-
-            echo "---- 🛠️ Running migrations ----"
             npm run migrate
-
-            echo "---- 🌱 Seeding database ----"
-            npm run seed
-
-            echo "---- 🧽 Cleaning unused images ----"
             docker image prune -f
-
-            echo "---- ✅ Deployment complete ----"
