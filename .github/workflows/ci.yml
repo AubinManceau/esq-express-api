@@ -37,12 +37,9 @@ jobs:
             docker compose build --no-cache
             docker compose up -d
 
-            echo "---- ⏳ Waiting for DB to be ready ----"
-            until docker compose exec db mysqladmin ping -h "localhost" --silent > /dev/null 2>&1; do
-              echo "Waiting for database connection..."
-              sleep 5
-            done
-            echo "✅ Database is ready!"
+            echo "---- ⏳ Waiting for DB healthcheck ----"
+            docker compose wait db
+            echo "✅ Database is healthy!"
 
             echo "---- 🛠️ Running migrations ----"
             npm run migrate

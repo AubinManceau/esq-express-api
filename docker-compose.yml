@@ -42,6 +42,11 @@ services:
       - db_data:/var/lib/mysql
     networks:
       - traefik_net
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      retries: 20
+      timeout: 5s
 
   phpmyadmin:
     image: phpmyadmin/phpmyadmin
