@@ -22,12 +22,11 @@ jobs:
           port: 22
           script_stop: true
           script: |
-            set -e  # stop on error
+            set -e
             echo "---- 🚀 Starting deployment ----"
-            
+
             cd ${{ secrets.PROJECT_PATH }}
-            
-            # Ensure git is clean
+
             echo "---- 🧹 Resetting git repo ----"
             git fetch origin master
             git reset --hard origin/master
@@ -39,16 +38,20 @@ jobs:
             docker compose up -d
 
             echo "---- ⏳ Waiting for DB to be ready ----"
-            until docker compose exec db mysqladmin ping -h "localhost" --silent; do
+            until docker compose exec db mysqladmin ping -h "localhost" --silent > /dev/null 2>&1; do
               echo "Waiting for database connection..."
-              sleep 10
+              sleep 5
             done
+            echo "✅ Database is ready!"
 
             echo "---- 🛠️ Running migrations ----"
             npm run migrate
+
+            echo "---- 🌱 Seeding database ----"
             npm run seed
 
             echo "---- 🧽 Cleaning unused images ----"
             docker image prune -f
 
             echo "---- ✅ Deployment complete ----"
+
