@@ -31,12 +31,25 @@ export default async (req, res, next) => {
             { expiresIn: '15min' }
           );
 
-          res.cookie('token', newAccessToken, {
+          const newRefreshToken = jwt.sign(
+            { userId: user.id },
+            process.env.SECRET_KEY_REFRESH_TOKEN,
+            { expiresIn: '7d' }
+          );
+
+          user.refreshToken = newRefreshToken;
+          await user.save();
+
+          const cookieConfig = {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: 'none',
-            maxAge: 15 * 60 * 1000,
-          });
+            domain: process.env.NODE_ENV === 'production' ? '.aubin-manceau.fr' : undefined,
+            path: '/',
+          };
+
+          res.cookie('token', newAccessToken, { ...cookieConfig, maxAge: 15 * 60 * 1000 });
+          res.cookie('refreshToken', newRefreshToken, { ...cookieConfig, maxAge: 7 * 24 * 60 * 60 * 1000 });
 
           req.auth = { userId: user.id };
           return next();
@@ -49,7 +62,6 @@ export default async (req, res, next) => {
     }
 
   } catch (error) {
-    console.error(error);
     return res.status(500).json({ status: 'error', message: 'Erreur serveur d’authentification.' });
   }
 };

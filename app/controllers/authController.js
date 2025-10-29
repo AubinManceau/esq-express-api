@@ -475,35 +475,35 @@ const refreshAccessToken = async (req, res) => {
 
 const logout = async (req, res) => {
     try {
-        const userId = req.auth.userId;
+        if (!req.auth?.userId) {
+        return res.status(401).json({
+            status: 'error',
+            message: 'Non authentifié. Impossible de se déconnecter.'
+        });
+        }
 
-        // Validation de l'utilisateur
+        const userId = req.auth.userId;
         const user = await models.Users.findByPk(userId);
         if (!user || !user.isActive) {
-            return res.status(404).json({ 
+            return res.status(404).json({
                 status: 'error',
                 message: 'Utilisateur non trouvé ou inactif pour la déconnexion.'
             });
         }
 
-        res.clearCookie("token", {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            domain: process.env.NODE_ENV === "production" ? '.aubin-manceau.fr' : undefined,
-            path: '/',
-            sameSite: 'none',
-        });
-        res.clearCookie("refreshToken", {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            domain: process.env.NODE_ENV === "production" ? '.aubin-manceau.fr' : undefined,
-            path: '/',
-            sameSite: 'none',
-        });
-
-        // Suppression du refresh token en base
         user.refreshToken = null;
         await user.save();
+
+        const cookieConfig = {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            domain: process.env.NODE_ENV === 'production' ? '.aubin-manceau.fr' : undefined,
+            sameSite: 'none',
+            path: '/',
+        };
+
+        res.clearCookie('token', cookieConfig);
+        res.clearCookie('refreshToken', cookieConfig);
 
         return res.status(200).json({
             status: 'success',
@@ -511,7 +511,7 @@ const logout = async (req, res) => {
         });
 
     } catch (error) {
-        return res.status(500).json({ 
+        return res.status(500).json({
             status: 'error',
             message: 'Erreur interne du serveur lors de la déconnexion.'
         });
