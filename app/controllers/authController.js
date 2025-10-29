@@ -307,12 +307,16 @@ const login = async (req, res) => {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production',
                 sameSite: 'none',
+                domain: process.env.NODE_ENV === 'production' ? '.aubin-manceau.fr' : undefined,
+                path: '/',
                 maxAge: 15 * 60 * 1000
             });
             res.cookie('refreshToken', refreshToken, {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production',
                 sameSite: 'none',
+                domain: process.env.NODE_ENV === 'production' ? '.aubin-manceau.fr' : undefined,
+                path: '/',
                 maxAge: 7 * 24 * 60 * 60 * 1000
             });
 
@@ -406,12 +410,16 @@ const refreshAccessToken = async (req, res) => {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production',
                 sameSite: 'none',
+                domain: process.env.NODE_ENV === 'production' ? '.aubin-manceau.fr' : undefined,
+                path: '/',
                 maxAge: 15 * 60 * 1000
             });
             res.cookie('refreshToken', newRefreshToken, {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production',
                 sameSite: 'none',
+                domain: process.env.NODE_ENV === 'production' ? '.aubin-manceau.fr' : undefined,
+                path: '/',
                 maxAge: 7 * 24 * 60 * 60 * 1000
             });
 
@@ -481,11 +489,15 @@ const logout = async (req, res) => {
         res.clearCookie("token", {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
+            domain: process.env.NODE_ENV === "production" ? '.aubin-manceau.fr' : undefined,
+            path: '/',
             sameSite: 'none',
         });
         res.clearCookie("refreshToken", {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
+            domain: process.env.NODE_ENV === "production" ? '.aubin-manceau.fr' : undefined,
+            path: '/',
             sameSite: 'none',
         });
 
