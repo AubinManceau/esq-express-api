@@ -10,8 +10,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v2
 
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v0.1.10
@@ -22,7 +22,8 @@ jobs:
           port: 22
           script_stop: true
           script: |
-            set -e
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
             echo "---- 🚀 Starting deployment ----"
 
             cd ${{ secrets.PROJECT_PATH }}
@@ -38,8 +39,10 @@ jobs:
             docker compose up -d
 
             echo "---- ⏳ Waiting for DB healthcheck ----"
-            docker compose wait db
-            echo "✅ Database is healthy!"
+            until docker compose exec db mysqladmin ping -h "localhost" --silent; do
+              echo "Waiting for database connection..."
+              sleep 10
+            done
 
             echo "---- 🛠️ Running migrations ----"
             npm run migrate
