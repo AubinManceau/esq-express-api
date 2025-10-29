@@ -27,6 +27,8 @@ services:
       - "traefik.http.routers.api_esq.rule=Host(`${API_DOMAIN}`)"
       - "traefik.http.routers.api_esq.entrypoints=websecure"
       - "traefik.http.routers.api_esq.tls.certresolver=resolver"
+      - "traefik.http.services.api_esq.loadbalancer.server.port=3000"
+
 
   db:
     image: mariadb:10.11
@@ -57,6 +59,7 @@ services:
       - "traefik.http.routers.pma_esq.rule=Host(`${PMA_DOMAIN}`)"
       - "traefik.http.routers.pma_esq.entrypoints=websecure"
       - "traefik.http.routers.pma_esq.tls.certresolver=resolver"
+      - "traefik.http.services.api_esq.loadbalancer.server.port=80"
 
   redis:
     image: redis:7-alpine
