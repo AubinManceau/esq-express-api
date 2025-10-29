@@ -59,7 +59,7 @@ services:
       - "traefik.http.routers.pma_esq.rule=Host(`${PMA_DOMAIN}`)"
       - "traefik.http.routers.pma_esq.entrypoints=websecure"
       - "traefik.http.routers.pma_esq.tls.certresolver=resolver"
-      - "traefik.http.services.api_esq.loadbalancer.server.port=80"
+      - "traefik.http.services.pma_esq.loadbalancer.server.port=80"
 
   redis:
     image: redis:7-alpine
