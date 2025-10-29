@@ -1,3 +1,5 @@
+name: esq-express-api
+
 services:
   app:
     build:
