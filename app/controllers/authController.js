@@ -306,7 +306,7 @@ const login = async (req, res) => {
 
             const hasAdminAccess = userData.roles.length > 0 && userData.roles.every(r => r.roleId === 1);
 
-            if (!hasAdminAccess) {
+            if (hasAdminAccess) {
                 return res.status(403).json({
                 status: 'error',
                 message: 'Vous n’avez pas accès à l\'espace administrateur.'
