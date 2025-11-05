@@ -303,6 +303,16 @@ const login = async (req, res) => {
         }
 
         if (req.headers['x-client-type'] === 'web') {
+
+            const hasAdminAccess = userData.roles.length > 0 && userData.roles.every(r => r.roleId === 1);
+
+            if (!hasAdminAccess) {
+                return res.status(403).json({
+                status: 'error',
+                message: 'Vous n’avez pas accès à l\'espace administrateur.'
+                });
+            }
+
             res.cookie('token', accessToken, {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production',
