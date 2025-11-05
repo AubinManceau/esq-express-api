@@ -25,8 +25,12 @@ export default async (req, res, next) => {
             return res.status(401).json({ status: 'error', message: 'Refresh token invalide.' });
           }
 
+          const roles = await models.UserRolesCategories.findAll({
+            where: { userId: user.id }
+          });
+
           const newAccessToken = jwt.sign(
-            { userId: user.id },
+            { userId: user.id, roles: roles.map(r => ({ roleId: r.roleId, categoryId: r.categoryId })) },
             process.env.SECRET_KEY_ACCESS_TOKEN,
             { expiresIn: '15min' }
           );
