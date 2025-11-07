@@ -47,7 +47,7 @@ export default async (req, res, next) => {
           const cookieConfig = {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
-            sameSite: 'none',
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
             domain: process.env.NODE_ENV === 'production' ? '.aubin-manceau.fr' : undefined,
             path: '/',
           };

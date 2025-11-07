@@ -1,0 +1,70 @@
+version: "3.9"
+
+name: esq-express-api
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NODE_ENV: ${NODE_ENV}
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=${NODE_ENV}
+    depends_on:
+      - db
+      - redis
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+    ports:
+      - "3000:3000"
+    command: >
+      sh -c "if [ \"$NODE_ENV\" = 'development' ];
+      then npx nodemon --legacy-watch server.js;
+      else node server.js;
+      fi"
+
+  db:
+    image: mariadb:10.11
+    restart: always
+    env_file:
+      - .env
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+    volumes:
+      - db_data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    restart: always
+    env_file:
+      - .env
+    environment:
+      PMA_HOST: db
+      PMA_USER: root
+      PMA_PASSWORD: ${DB_PASSWORD}
+    depends_on:
+      - db
+    ports:
+      - "8080:80"
+
+  redis:
+    image: redis:7-alpine
+    restart: always
+    env_file:
+      - .env
+    command: ["redis-server", "--appendonly", "yes", "--save", "60", "1000", "--requirepass", "${REDIS_PASSWORD}"]
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+
+volumes:
+  db_data:
+  redis_data:

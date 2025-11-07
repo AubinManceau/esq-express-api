@@ -316,7 +316,7 @@ const login = async (req, res) => {
             res.cookie('token', accessToken, {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production',
-                sameSite: 'none',
+                sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
                 domain: process.env.NODE_ENV === 'production' ? '.aubin-manceau.fr' : undefined,
                 path: '/',
                 maxAge: 15 * 60 * 1000
@@ -324,7 +324,7 @@ const login = async (req, res) => {
             res.cookie('refreshToken', refreshToken, {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production',
-                sameSite: 'none',
+                sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
                 domain: process.env.NODE_ENV === 'production' ? '.aubin-manceau.fr' : undefined,
                 path: '/',
                 maxAge: 7 * 24 * 60 * 60 * 1000
@@ -419,7 +419,7 @@ const refreshAccessToken = async (req, res) => {
             res.cookie('token', newAccessToken, {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production',
-                sameSite: 'none',
+                sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
                 domain: process.env.NODE_ENV === 'production' ? '.aubin-manceau.fr' : undefined,
                 path: '/',
                 maxAge: 15 * 60 * 1000
@@ -427,7 +427,7 @@ const refreshAccessToken = async (req, res) => {
             res.cookie('refreshToken', newRefreshToken, {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production',
-                sameSite: 'none',
+                sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
                 domain: process.env.NODE_ENV === 'production' ? '.aubin-manceau.fr' : undefined,
                 path: '/',
                 maxAge: 7 * 24 * 60 * 60 * 1000
@@ -508,7 +508,7 @@ const logout = async (req, res) => {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             domain: process.env.NODE_ENV === 'production' ? '.aubin-manceau.fr' : undefined,
-            sameSite: 'none',
+                sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
             path: '/',
         };
 
