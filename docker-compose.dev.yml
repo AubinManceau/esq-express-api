@@ -1,31 +1,24 @@
-version: "3.9"
-
-name: esq-express-api
+name: esq-express-api-dev
 
 services:
   app:
     build:
       context: .
       dockerfile: Dockerfile
-      args:
-        NODE_ENV: ${NODE_ENV}
+      target: development
     env_file:
       - .env
     environment:
-      - NODE_ENV=${NODE_ENV}
+      - NODE_ENV=development
     depends_on:
       - db
       - redis
     volumes:
       - .:/usr/src/app
       - /usr/src/app/node_modules
+      - /usr/src/app/dist
     ports:
       - "3000:3000"
-    command: >
-      sh -c "if [ \"$NODE_ENV\" = 'development' ];
-      then npx nodemon --legacy-watch server.js;
-      else node server.js;
-      fi"
 
   db:
     image: mariadb:10.11

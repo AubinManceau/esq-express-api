@@ -5,32 +5,23 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      args:
-        NODE_ENV: ${NODE_ENV}
+      target: production
     networks:
       - traefik_net
     env_file:
       - .env
     environment:
-      - NODE_ENV=${NODE_ENV}
+      - NODE_ENV=production
     depends_on:
       - db
       - redis
-    volumes:
-      - .:/usr/src/app
-      - /usr/src/app/node_modules
-    command: >
-      sh -c "if [ \"$NODE_ENV\" = 'development' ];
-      then npx nodemon --legacy-watch server.js;
-      else node server.js;
-      fi"
+    restart: unless-stopped
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.api_esq.rule=Host(`${API_DOMAIN}`)"
       - "traefik.http.routers.api_esq.entrypoints=websecure"
       - "traefik.http.routers.api_esq.tls.certresolver=resolver"
       - "traefik.http.services.api_esq.loadbalancer.server.port=3000"
-
 
   db:
     image: mariadb:10.11

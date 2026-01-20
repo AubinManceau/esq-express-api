@@ -1,27 +1,66 @@
-# Étape 1 : Utiliser une image officielle Node
-FROM node:20-alpine
+# ========================================
+# Stage 1: Build - Compile TypeScript
+# ========================================
+FROM node:20-alpine AS builder
 
-# Étape 2 : Définir le répertoire de travail
 WORKDIR /usr/src/app
 
-# Étape 3 : Copier les fichiers package pour installer les deps
+# Copy package files
 COPY package*.json ./
 
-# Étape 4 : Installer les dépendances
-# Utilise l'ARG pour basculer entre prod et dev
-ARG NODE_ENV=production
-ENV NODE_ENV=$NODE_ENV
+# Install ALL dependencies (including devDependencies for build)
+RUN npm ci
 
-RUN if [ "$NODE_ENV" = "development" ]; \
-    then npm install; \
-    else npm install --omit=dev; \
-    fi
-
-# Étape 5 : Copier le reste du code
+# Copy source code
 COPY . .
 
-# Étape 6 : Exposer le port
+# Build TypeScript to JavaScript
+RUN npm run build
+
+# ========================================
+# Stage 2: Production - Run compiled code
+# ========================================
+FROM node:20-alpine AS production
+
+WORKDIR /usr/src/app
+
+# Copy package files
+COPY package*.json ./
+
+# Install ONLY production dependencies
+RUN npm ci --omit=dev
+
+# Copy compiled JavaScript from builder
+COPY --from=builder /usr/src/app/dist ./dist
+
+# Copy necessary runtime files
+COPY app/uploads ./app/uploads
+COPY .sequelizerc ./
+
+# Expose port
 EXPOSE 3000
 
-# Étape 7 : Démarrer l'application
-CMD ["node", "server.js"]
+# Start the application
+CMD ["node", "dist/server.js"]
+
+# ========================================
+# Stage 3: Development - Hot reload with TypeScript
+# ========================================
+FROM node:20-alpine AS development
+
+WORKDIR /usr/src/app
+
+# Copy package files
+COPY package*.json ./
+
+# Install ALL dependencies
+RUN npm install
+
+# Copy source code
+COPY . .
+
+# Expose port
+EXPOSE 3000
+
+# Start with nodemon and tsx for hot reload
+CMD ["npx", "nodemon", "--exec", "tsx", "server.ts"]
