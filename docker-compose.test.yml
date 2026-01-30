@@ -1,0 +1,39 @@
+services:
+  # L'application configurée pour les tests
+  app-test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development # On garde la cible dev pour avoir les devDependencies (Jest/Vitest)
+    environment:
+      - NODE_ENV=test
+      - DB_HOST=db-test
+      - DB_PORT=3306
+      - DB_NAME=api_test
+      - DB_PASSWORD=test_password
+      - REDIS_HOST=redis-test
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=test_redis_pass
+    depends_on:
+      db-test:
+        condition: service_healthy # Attend que la DB soit vraiment prête
+      redis-test:
+        condition: service_started
+    # COMMANDE : On lance les tests au démarrage du conteneur
+    command: npm run docker:test 
+
+  db-test:
+    image: mariadb:10.11
+    environment:
+      MYSQL_ROOT_PASSWORD: test_password
+      MYSQL_DATABASE: api_test
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    # Pas de ports exposés nécessaire car l'app est dans le même réseau Docker
+
+  redis-test:
+    image: redis:7-alpine
+    command: ["redis-server", "--requirepass", "test_redis_pass"]

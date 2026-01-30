@@ -1,6 +1,5 @@
 node_modules/
 dist/
-app/tests/
 .git/
 .gitignore
 .idea/

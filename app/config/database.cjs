@@ -1,4 +1,8 @@
 // Configuration de la base de données pour Sequelize CLI
+
+const { log } = require('node:console');
+const { default: test } = require('node:test');
+
 // Ce fichier est en JavaScript pour être compatible avec sequelize-cli
 require('dotenv').config();
 
@@ -13,6 +17,15 @@ module.exports = {
         dialectOptions: {
             timezone: 'Etc/GMT+0',
         },
+        logging: false,
+    },
+    test: {
+        username: "root",
+        password: process.env.DB_PASSWORD,
+        database: process.env.DB_NAME,
+        host: process.env.DB_HOST,
+        port: process.env.DB_PORT || 3306,
+        dialect: 'mariadb',
         logging: false,
     },
     production: {
