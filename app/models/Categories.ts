@@ -19,12 +19,6 @@ export default (sequelize: Sequelize) => {
         },
     }, {
         tableName: 'categories',
-        timestamps: false // Based on original file not having timestamps? Wait, original file had NO timestamps config? 
-        // Checking Roles.js and Categories.js content again...
-        // They did NOT explicitly disable timestamps, so Sequelize defaults to true.
-        // However, the interface needs to match. If timestamps are true (default), I should add createdAt/updatedAt to interface.
-        // Original Categories.js: 
-        // export default (sequelize) => { return sequelize.define('Categories', { name: ... }, { tableName: 'categories' }); };
-        // Default is timestamps: true.
+        timestamps: false
     });
 };

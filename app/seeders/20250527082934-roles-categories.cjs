@@ -11,15 +11,11 @@ module.exports = {
     const hashedPassword = await bcrypt.hash(userPassword, 10);
 
     const roleObjects = roles.map(name => ({
-      name,
-      createdAt: new Date(),
-      updatedAt: new Date()
+      name
     }));
 
     const categoryObjects = categories.map(name => ({
-      name,
-      createdAt: new Date(),
-      updatedAt: new Date()
+      name
     }));
 
     const userObjects = [{

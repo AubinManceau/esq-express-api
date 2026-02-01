@@ -19,5 +19,6 @@ export default (sequelize: Sequelize) => {
         },
     }, {
         tableName: 'roles',
+        timestamps: false
     });
 };

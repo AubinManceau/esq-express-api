@@ -1,10 +1,11 @@
 services:
-  # L'application configurée pour les tests
   app-test:
     build:
       context: .
       dockerfile: Dockerfile
-      target: development # On garde la cible dev pour avoir les devDependencies (Jest/Vitest)
+      target: development
+    env_file: 
+      - .env
     environment:
       - NODE_ENV=test
       - DB_HOST=db-test
@@ -16,10 +17,9 @@ services:
       - REDIS_PASSWORD=test_redis_pass
     depends_on:
       db-test:
-        condition: service_healthy # Attend que la DB soit vraiment prête
+        condition: service_healthy
       redis-test:
         condition: service_started
-    # COMMANDE : On lance les tests au démarrage du conteneur
     command: npm run docker:test 
 
   db-test:
@@ -32,7 +32,6 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
-    # Pas de ports exposés nécessaire car l'app est dans le même réseau Docker
 
   redis-test:
     image: redis:7-alpine
