@@ -13,6 +13,7 @@ import privateMessageRoutes from './routes/privateMessage.js';
 import groupChatRoutes from './routes/groupChats.js';
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
+import bodyParser from 'body-parser';
 
 dotenv.config();
 
@@ -29,6 +30,7 @@ app.use(cors({
 }));
 app.disable('x-powered-by');
 app.use(express.json());
+app.use(bodyParser.json());
 app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/articles', articleRoutes);

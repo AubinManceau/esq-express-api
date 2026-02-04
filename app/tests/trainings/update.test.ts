@@ -97,23 +97,23 @@ describe('Trainings API', () => {
     expect(trainingInDb?.date).toBe(training.date);
   });
 
-  // it('ne devrait pas modifier un training avec un body invalide', async () => {
-  //   const training = await createTestTraining();
+  it('ne devrait pas modifier un training avec un body invalide', async () => {
+    const training = await createTestTraining();
     
-  //   const res = await request(app)
-  //     .patch(`/api/v1/trainings/${training.id}`)
-  //     .set(authHeaders)
-  //     .send({date: 'invalid-date'});
+    const res = await request(app)
+      .patch(`/api/v1/trainings/${training.id}`)
+      .set(authHeaders)
+      .send({date: 'invalid-date'});
 
-  //   if (res.status !== 400) {
-  //     console.error('Response body:', res.body);
-  //   }
+    if (res.status !== 400) {
+      console.error('Response body:', res.body);
+    }
 
-  //   expect(res.status).toBe(400);
-  //   const trainingInDb = await models.Trainings.findByPk(training.id);
-  //   expect(trainingInDb?.date).not.toBe('invalid-date');
-  //   expect(trainingInDb?.date).toBe(training.date);
-  // });
+    expect(res.status).toBe(400);
+    const trainingInDb = await models.Trainings.findByPk(training.id);
+    expect(trainingInDb?.date).not.toBe('invalid-date');
+    expect(trainingInDb?.date).toBe(training.date);
+  });
 
   it('ne devrait pas modifier un training avec une category inexistante', async () => {
     const training = await createTestTraining();

@@ -87,27 +87,27 @@ describe('Trainings API', () => {
     expect(finalCount).toBe(initialCount);
   });
 
-  // it('ne devrait pas créer un training avec un body invalide', async () => {
-  //   const initialCount = await models.Trainings.count();
+  it('ne devrait pas créer un training avec un body invalide', async () => {
+    const initialCount = await models.Trainings.count();
 
-  //   const res = await request(app)
-  //     .post('/api/v1/trainings')
-  //     .set(authHeaders)
-  //     .send({
-  //       type: 'invalid-type',
-  //       date: 'invalid-date',
-  //       startTime: 'invalid-time',
-  //       categoryId: 1,
-  //     });
+    const res = await request(app)
+      .post('/api/v1/trainings')
+      .set(authHeaders)
+      .send({
+        type: 'invalid-type',
+        date: 'invalid-date',
+        startTime: 'invalid-time',
+        categoryId: 1,
+      });
 
-  //   if (res.status !== 400) {
-  //     console.error('Response body:', res.body);
-  //   }
+    if (res.status !== 400) {
+      console.error('Response body:', res.body);
+    }
 
-  //   const finalCount = await models.Trainings.count();
-  //   expect(res.status).toBe(400);
-  //   expect(finalCount).toBe(initialCount);
-  // });
+    const finalCount = await models.Trainings.count();
+    expect(res.status).toBe(400);
+    expect(finalCount).toBe(initialCount);
+  });
 
   it('ne devrait pas créer un training avec une category inexistante', async () => {
     const initialCount = await models.Trainings.count();

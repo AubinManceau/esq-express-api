@@ -5,7 +5,7 @@
         "moduleResolution": "NodeNext",
         "outDir": "./dist",
         "rootDir": "./",
-        "strict": false,
+        "strict": true,
         "noImplicitAny": false,
         "strictNullChecks": false,
         "esModuleInterop": true,
