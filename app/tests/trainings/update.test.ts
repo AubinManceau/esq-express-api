@@ -56,7 +56,7 @@ describe('Trainings API', () => {
     const training = await createTestTraining();
 
     const res = await request(app)
-      .post(`/api/v1/trainings/${training.id}`)
+      .patch(`/api/v1/trainings/${training.id}`)
       .set(authHeaders)
       .send({categoryId: 2});
 
@@ -81,86 +81,69 @@ describe('Trainings API', () => {
     expect(redis.del).toHaveBeenCalledWith('trainings-user:{}{}');
   });
 
-  // it('ne devrait pas modifié un training avec un utilisateur non authentifié', async () => {
-  //   const initialCount = await models.Trainings.count();
+  it('ne devrait pas modifié un training avec un utilisateur non authentifié', async () => {
+    const training = await createTestTraining();
 
-  //   const res = await request(app)
-  //     .post('/api/v1/trainings')
-  //     .send({
-  //       type: 'training',
-  //       date: '2024-10-10',
-  //       startTime: '10:00:00',
-  //       categoryId: 1,
-  //     });
+    const res = await request(app)
+      .patch(`/api/v1/trainings/${training.id}`)
+      .send({date: '2024-10-10'});
 
-  //   if (res.status !== 401) {
-  //     console.error('Response body:', res.body);
-  //   }
-  //   const finalCount = await models.Trainings.count();
-  //   expect(res.status).toBe(401);
-  //   expect(finalCount).toBe(initialCount);
-  // });
+    if (res.status !== 401) {
+      console.error('Response body:', res.body);
+    }
+    expect(res.status).toBe(401);
+    const trainingInDb = await models.Trainings.findByPk(training.id);
+    expect(trainingInDb?.date).not.toBe('2024-10-10');
+    expect(trainingInDb?.date).toBe(training.date);
+  });
 
   // it('ne devrait pas modifier un training avec un body invalide', async () => {
-  //   const initialCount = await models.Trainings.count();
-
+  //   const training = await createTestTraining();
+    
   //   const res = await request(app)
-  //     .post('/api/v1/trainings')
+  //     .patch(`/api/v1/trainings/${training.id}`)
   //     .set(authHeaders)
-  //     .send({
-  //       type: 'training',
-  //       startTime: '10:00:00',
-  //       categoryId: 1,
-  //     });
+  //     .send({date: 'invalid-date'});
 
   //   if (res.status !== 400) {
   //     console.error('Response body:', res.body);
   //   }
 
-  //   const finalCount = await models.Trainings.count();
   //   expect(res.status).toBe(400);
-  //   expect(finalCount).toBe(initialCount);
+  //   const trainingInDb = await models.Trainings.findByPk(training.id);
+  //   expect(trainingInDb?.date).not.toBe('invalid-date');
+  //   expect(trainingInDb?.date).toBe(training.date);
   // });
 
-  // it('ne devrait pas modifier un training avec une category inexistante', async () => {
-  //   const initialCount = await models.Trainings.count();
-  //   const res = await request(app)
-  //     .post('/api/v1/trainings')
-  //     .set(authHeaders)
-  //     .send({
-  //       type: 'training',
-  //       date: '2024-10-10',
-  //       startTime: '10:00:00',
-  //       categoryId: 9999,
-  //     });
+  it('ne devrait pas modifier un training avec une category inexistante', async () => {
+    const training = await createTestTraining();
 
-  //   if (res.status !== 404) {
-  //     console.error('Response body:', res.body);
-  //   }
+    const res = await request(app)
+      .patch(`/api/v1/trainings/${training.id}`)
+      .set(authHeaders)
+      .send({categoryId: 9999});
 
-  //   const finalCount = await models.Trainings.count();
-  //   expect(res.status).toBe(404);
-  //   expect(finalCount).toBe(initialCount);
-  // });
+    if (res.status !== 404) {
+      console.error('Response body:', res.body);
+    }
 
-  // it('ne devrait pas modifier un training inexistant', async () => {
-  //   const initialCount = await models.Trainings.count();
-  //   const res = await request(app)
-  //     .post('/api/v1/trainings')
-  //     .set(authHeaders)
-  //     .send({
-  //       type: 'training',
-  //       date: '2024-10-10',
-  //       startTime: '10:00:00',
-  //       categoryId: 9999,
-  //     });
+    expect(res.status).toBe(404);
+    const trainingInDb = await models.Trainings.findByPk(training.id);
+    expect(trainingInDb?.categoryId).toBe(training.categoryId);
+  });
 
-  //   if (res.status !== 404) {
-  //     console.error('Response body:', res.body);
-  //   }
+  it('ne devrait pas modifier un training inexistant', async () => {
+    const trainingId = 9999;
+    
+    const res = await request(app)
+      .patch(`/api/v1/trainings/${trainingId}`)
+      .set(authHeaders)
+      .send({date: '2024-10-10'});
 
-  //   const finalCount = await models.Trainings.count();
-  //   expect(res.status).toBe(404);
-  //   expect(finalCount).toBe(initialCount);
-  // });
+    if (res.status !== 404) {
+      console.error('Response body:', res.body);
+    }
+
+    expect(res.status).toBe(404);
+  });
 });
