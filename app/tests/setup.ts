@@ -7,6 +7,11 @@ vi.mock('../utils/mail.js', () => ({
   sendVerificationEmail: vi.fn().mockResolvedValue(true),
   sendPasswordResetEmail: vi.fn().mockResolvedValue(true)
 }));
+vi.mock('../config/redisClient.js', () => ({
+  default: {
+    del: vi.fn().mockResolvedValue(1)
+  }
+}));
 
 beforeAll(async () => {
   await sequelize.query('SET FOREIGN_KEY_CHECKS = 0;');
