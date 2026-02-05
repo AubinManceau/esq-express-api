@@ -15,3 +15,8 @@ export const updateTrainingInput = z.object({
   status: z.enum(['active', 'canceled']).optional(),
   categoryId: z.number().int().positive().optional(),
 });
+
+export const updateTrainingStatusInput = z.object({
+  id: z.coerce.number().int().positive(),
+  status: z.enum(['present', 'absent', 'pending']),
+});

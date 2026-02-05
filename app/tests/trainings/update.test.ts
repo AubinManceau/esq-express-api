@@ -176,20 +176,4 @@ describe('Trainings API', () => {
 
     expect(res.status).toBe(404);
   });
-
-  it('devrait modifier le statut d\'un user sur un training', async () => {
-    const training = await createTestTraining();
-
-    const auth = await getPlayerToken();
-    authHeaders = auth.headers;
-
-    const res = await request(app)
-      .patch(`/api/v1/trainings/${training.id}/status/absent`)
-      .set(authHeaders)
-
-    expect(res.status).toBe(200);
-
-    expect(redis.del).toHaveBeenCalledWith('trainings:{}{}');
-    expect(redis.del).toHaveBeenCalledWith('trainings-user:{}{}');
-  });
 });

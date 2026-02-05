@@ -389,15 +389,6 @@ const updateTrainingUserStatus = async (req: Request, res: Response) => {
         const trainingId = parseInt(req.params.id as string, 10);
         const status = req.params.status as string;
 
-        const allowedStatuses = ['present', 'absent', 'pending'];
-
-        if (!allowedStatuses.includes(status)) {
-            return res.status(400).json({
-                status: 'error',
-                message: 'Statut invalide. Les statuts autorisés sont: present, absent, pending.'
-            });
-        }
-
         const record = await models.TrainingUsersStatus.findOne({
             where: { trainingId, userId } as any
         });
