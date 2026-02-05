@@ -9,6 +9,9 @@ vi.mock('../utils/mail.js', () => ({
 }));
 vi.mock('../config/redisClient.js', () => ({
   default: {
+    get: vi.fn().mockResolvedValue(null),
+    set: vi.fn().mockResolvedValue('OK'),
+    setex: vi.fn().mockResolvedValue('OK'),
     del: vi.fn().mockResolvedValue(1)
   }
 }));
