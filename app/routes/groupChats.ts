@@ -12,6 +12,7 @@ router.patch('/:id', auth, role([4]), groupChatsCtrl.updateGroupChat);
 router.delete('/:id', auth, role([4]), groupChatsCtrl.deleteGroupChat);
 router.get('/:id', auth, groupChatsCtrl.getGroupChatById);
 router.get('/', auth, cacheMiddleware('groupChats:', 120), groupChatsCtrl.getAllGroupChats);
+
 router.post('/:id/messages', auth, groupMessagesCtrl.sendGroupMessage);
 
 export default router;
