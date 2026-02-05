@@ -1,8 +1,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import request from 'supertest';
 import { app } from '../../app.js';
-import { getCoachToken, getPlayerToken, getAdminToken } from '../utils/auth.helper.js';
-import redis from '../../config/redisClient.js'
+import { getPlayerToken, getAdminToken } from '../utils/auth.helper.js';
 import models from '../../models/index.js';
 
 describe('Trainings API', () => {
@@ -31,6 +30,10 @@ describe('Trainings API', () => {
     const res = await request(app)
       .get('/api/v1/trainings')
       .set(authHeaders)
+
+    if (res.status !== 200) {
+      console.error('Response body:', res.body);
+    }
 
     expect(res.status).toBe(200);
     expect(res.body.status).toBe('success');
@@ -61,6 +64,20 @@ describe('Trainings API', () => {
     expect(res.status).toBe(401);
   });
 
+  it('ne devrait pas afficher tous les trainings avec un utilisateur non autorisé', async () => {
+    const auth = await getPlayerToken();
+    authHeaders = auth.headers;
+
+    const res = await request(app)
+      .get(`/api/v1/trainings`)
+      .set(authHeaders)
+
+    if (res.status !== 403) {
+      console.error('Response body:', res.body);
+    }
+    expect(res.status).toBe(403);
+  });
+
   it('devrait afficher le training', async () => {
     const player = await getPlayerToken();
     const training = await createTestTraining();
@@ -73,6 +90,10 @@ describe('Trainings API', () => {
     const res = await request(app)
       .get(`/api/v1/trainings/${training.id}`)
       .set(authHeaders)
+
+    if (res.status !== 200) {
+      console.error('Response body:', res.body);
+    }
 
     expect(res.status).toBe(200);
     expect(res.body.status).toBe('success');
@@ -102,6 +123,10 @@ describe('Trainings API', () => {
       .get(`/api/v1/trainings/${trainingId}`)
       .set(authHeaders)
 
+    if (res.status !== 404) {
+      console.error('Response body:', res.body);
+    }
+
     expect(res.status).toBe(404);
     expect(res.body.status).toBe('error');
   });
@@ -130,6 +155,10 @@ describe('Trainings API', () => {
     const res = await request(app)
       .get('/api/v1/trainings/user')
       .set(authHeaders)
+
+    if (res.status !== 200) {
+      console.error('Response body:', res.body);
+    }
 
     expect(res.status).toBe(200);
     expect(res.body.data).toHaveLength(1);
@@ -171,6 +200,10 @@ describe('Trainings API', () => {
       .get('/api/v1/trainings/user')
       .set(authHeaders)
 
+    if (res.status !== 404) {
+      console.error('Response body:', res.body);
+    }
+
     expect(res.status).toBe(404);
     const statusInDb = await models.TrainingUsersStatus.findOne({
         where: { 
@@ -179,5 +212,20 @@ describe('Trainings API', () => {
         }
     });
     expect(statusInDb).toBeNull();
+  });
+
+  it('ne devrait pas afficher tous les trainings de l\'utilisateur s\'il n\'a pas de categories', async () => {
+    const auth = await getAdminToken();
+    authHeaders = auth.headers;
+
+    const res = await request(app)
+      .get('/api/v1/trainings/user')
+      .set(authHeaders)
+
+    if (res.status !== 404) {
+      console.error('Response body:', res.body);
+    }
+
+    expect(res.status).toBe(404);
   });
 });
