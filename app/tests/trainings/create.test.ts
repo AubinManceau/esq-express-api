@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import request from 'supertest';
 import { app } from '../../app.js';
-import { getAuthToken } from '../utils/auth.helper.js';
+import { getCoachToken } from '../utils/auth.helper.js';
 import redis from '../../config/redisClient.js'
 import models from '../../models/index.js';
 
@@ -9,7 +9,7 @@ describe('Trainings API', () => {
   let authHeaders: { Cookie: string };
 
   beforeAll(async () => {
-    const auth = await getAuthToken();
+    const auth = await getCoachToken();
     authHeaders = auth.headers;
   });
 

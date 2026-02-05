@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import request from 'supertest';
 import { app } from '../../app.js';
-import { getAuthToken } from '../utils/auth.helper.js';
+import { getCoachToken, getPlayerToken } from '../utils/auth.helper.js';
 import redis from '../../config/redisClient.js'
 import models from '../../models/index.js';
 
@@ -19,13 +19,11 @@ describe('Trainings API', () => {
     });
   };
 
-  beforeAll(async () => {
-    const auth = await getAuthToken();
-    authHeaders = auth.headers;
-  });
-
   it('devrait modifier un training et purger le cache', async () => {
     const training = await createTestTraining();
+
+    const auth = await getCoachToken();
+    authHeaders = auth.headers;
 
     const res = await request(app)
       .patch(`/api/v1/trainings/${training.id}`)
@@ -54,6 +52,9 @@ describe('Trainings API', () => {
 
   it('devrait modifier un training, lier les users et purger le cache', async () => {
     const training = await createTestTraining();
+
+    const auth = await getCoachToken();
+    authHeaders = auth.headers;
 
     const res = await request(app)
       .patch(`/api/v1/trainings/${training.id}`)
@@ -97,8 +98,31 @@ describe('Trainings API', () => {
     expect(trainingInDb?.date).toBe(training.date);
   });
 
+  it('ne devrait pas modifié un training avec un utilisateur non autorisé', async () => {
+    const training = await createTestTraining();
+
+    const auth = await getPlayerToken();
+    authHeaders = auth.headers;
+
+    const res = await request(app)
+      .patch(`/api/v1/trainings/${training.id}`)
+      .set(authHeaders)
+      .send({date: '2024-10-10'});
+
+    if (res.status !== 403) {
+      console.error('Response body:', res.body);
+    }
+    expect(res.status).toBe(403);
+    const trainingInDb = await models.Trainings.findByPk(training.id);
+    expect(trainingInDb?.date).not.toBe('2024-10-10');
+    expect(trainingInDb?.date).toBe(training.date);
+  });
+
   it('ne devrait pas modifier un training avec un body invalide', async () => {
     const training = await createTestTraining();
+
+    const auth = await getCoachToken();
+    authHeaders = auth.headers;
     
     const res = await request(app)
       .patch(`/api/v1/trainings/${training.id}`)
@@ -118,6 +142,9 @@ describe('Trainings API', () => {
   it('ne devrait pas modifier un training avec une category inexistante', async () => {
     const training = await createTestTraining();
 
+    const auth = await getCoachToken();
+    authHeaders = auth.headers;
+
     const res = await request(app)
       .patch(`/api/v1/trainings/${training.id}`)
       .set(authHeaders)
@@ -134,6 +161,9 @@ describe('Trainings API', () => {
 
   it('ne devrait pas modifier un training inexistant', async () => {
     const trainingId = 9999;
+
+    const auth = await getCoachToken();
+    authHeaders = auth.headers;
     
     const res = await request(app)
       .patch(`/api/v1/trainings/${trainingId}`)
@@ -145,5 +175,21 @@ describe('Trainings API', () => {
     }
 
     expect(res.status).toBe(404);
+  });
+
+  it('devrait modifier le statut d\'un user sur un training', async () => {
+    const training = await createTestTraining();
+
+    const auth = await getPlayerToken();
+    authHeaders = auth.headers;
+
+    const res = await request(app)
+      .patch(`/api/v1/trainings/${training.id}/status/absent`)
+      .set(authHeaders)
+
+    expect(res.status).toBe(200);
+
+    expect(redis.del).toHaveBeenCalledWith('trainings:{}{}');
+    expect(redis.del).toHaveBeenCalledWith('trainings-user:{}{}');
   });
 });
