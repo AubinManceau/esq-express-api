@@ -257,8 +257,9 @@ const getOneTeam = async (req: Request, res: Response) => {
     try {
         const id = req.params.id;
         const team = await models.Teams.findByPk(id as any, {
+            attributes: {exclude: ['categoryId'] },
             include: [
-                { model: models.Categories, attributes: ['id', 'name', 'division'] },
+                { model: models.Categories, attributes: ['id', 'name'] },
                 { model: models.Users, attributes: ['id', 'firstName', 'lastName', 'email', 'phone'], through: { attributes: [] } }
             ]
         });

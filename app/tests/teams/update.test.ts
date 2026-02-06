@@ -8,10 +8,10 @@ import models from '../../models/index.js';
 describe('Teams API', () => {
   let authHeaders: { Cookie: string };
 
-    beforeAll(async () => {
-        const auth = await getMemberToken();
-        authHeaders = auth.headers;
-    });
+  beforeAll(async () => {
+      const auth = await getMemberToken();
+      authHeaders = auth.headers;
+  });
 
   const createTestTeam = async (overrides = {}) => {
     const coach = await getCoachToken();
@@ -112,8 +112,7 @@ describe('Teams API', () => {
 
     const coachInTeamUpdated = await models.UsersCoachTeam.findAll({
       where: {
-        teamId: teamId,
-        userCoachId: coachInTeam.userCoachId
+        teamId: teamId
       },
     });
     expect(coachInTeamUpdated.length).toBe(0);
