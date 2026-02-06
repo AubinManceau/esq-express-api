@@ -80,6 +80,20 @@ const createGroupChat = async (req: Request, res: Response) => {
 
         await redis.del('groupChats:{}{}');
         await t.commit();
+
+        const io = req.app.get('io');
+        userIds.forEach(userId => {
+            io.to(`user_${userId}`).emit('added_to_group', { groupChat });
+            
+            const userRoom = io.sockets.adapter.rooms.get(`user_${userId}`);
+            if (userRoom) {
+                userRoom.forEach(socketId => {
+                    const socket = io.sockets.sockets.get(socketId);
+                    if (socket) socket.join(`group_${groupChat.id}`);
+                });
+            }
+        });
+
         return res.status(201).json({
             status: 'success',
             message: 'Groupe de discussion créé avec succès.',
@@ -167,6 +181,19 @@ const updateGroupChat = async (req: Request, res: Response) => {
         await redis.del('groupChats:{}{}');
         await t.commit();
 
+        const io = req.app.get('io');
+        userIds.forEach(userId => {
+            io.to(`user_${userId}`).emit('added_to_group', { groupChat });
+            
+            const userRoom = io.sockets.adapter.rooms.get(`user_${userId}`);
+            if (userRoom) {
+                userRoom.forEach(socketId => {
+                    const socket = io.sockets.sockets.get(socketId);
+                    if (socket) socket.join(`group_${groupChat.id}`);
+                });
+            }
+        });
+
         return res.status(200).json({
             status: 'success',
             message: 'Groupe de discussion mis à jour avec succès.',
@@ -200,6 +227,10 @@ const deleteGroupChat = async (req: Request, res: Response) => {
         await groupChat.destroy({ transaction: t });
         await redis.del('groupChats:{}{}');
         await t.commit();
+
+        const io = req.app.get('io');
+        io.to(`group_${groupChat.id}`).emit('group_deleted', { groupChatId: groupChat.id });
+
         return res.status(200).json({
             status: 'success',
             message: 'Groupe de discussion supprimé avec succès.',
@@ -255,7 +286,8 @@ const getGroupChatById = async (req: Request, res: Response) => {
                 {
                     model: models.GroupMessages,
                     attributes: ['id', 'content', 'senderId', 'createdAt'],
-                    order: [['createdAt', 'ASC']]
+                    order: [['createdAt', 'DESC']],
+                    limit: 50,
                 }
             ],
             attributes: ['id', 'name'],

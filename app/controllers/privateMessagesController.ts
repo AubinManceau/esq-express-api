@@ -132,7 +132,8 @@ const getPrivateConversation = async (req: Request, res: Response) => {
                     { senderId: otherUserId, receiverId: userId }
                 ]
             },
-            order: [['createdAt', 'ASC']],
+            order: [['createdAt', 'DESC']],
+            limit: 50,
         });
 
         return res.status(200).json({
