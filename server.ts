@@ -3,8 +3,12 @@ import { app } from './app/app.js';
 import swaggerJSDoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
 import 'dotenv/config'
+import { initSocket } from './app/config/socket.js';
 
 const server = http.createServer(app);
+
+const io = initSocket(server);
+app.set('io', io);
 
 const normalizePort = (val: string | number) => {
     const port = parseInt(val as string, 10);

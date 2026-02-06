@@ -40,6 +40,18 @@ const sendPrivateMessage = async (req: Request, res: Response) => {
         }, { transaction: t });
 
         await t.commit();
+
+        const io = req.app.get('io');
+        io.to(`user_${receiverId}`).emit('new_private_message', {
+            message: {
+                id: message.id,
+                senderId: message.senderId,
+                receiverId: message.receiverId,
+                content: message.content,
+                createdAt: message.createdAt,
+            }
+        });
+
         return res.status(201).json({
             status: 'success',
             message: 'Message envoyé avec succès.',

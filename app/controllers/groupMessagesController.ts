@@ -32,6 +32,18 @@ const sendGroupMessage = async (req: Request, res: Response) => {
         }, { transaction: t });
 
         await t.commit();
+
+        const io = req.app.get('io');
+        io.to(`group_${chatGroupId}`).emit('new_group_message', {
+            message: {
+                id: message.id,
+                senderId: message.senderId,
+                content: message.content,
+                chatGroupId: message.chatGroupId,
+                createdAt: message.createdAt,
+            }
+        });
+
         return res.status(201).json({
             status: 'success',
             message: 'Message envoyé avec succès.',
