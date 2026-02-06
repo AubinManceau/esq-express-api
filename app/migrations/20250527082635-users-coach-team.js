@@ -16,7 +16,7 @@ export default {
       },
       userCoachId: {
         type: Sequelize.INTEGER,
-        allowNull: true,
+        allowNull: false,
         primaryKey: true,
         references: {
           model: 'users',

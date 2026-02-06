@@ -6,13 +6,13 @@ import { Request, Response } from 'express';
 const createTeam = async (req: Request, res: Response) => {
     const t = await models.sequelize.transaction();
     try {
-        const { name, division, categoryId, userCoachIds = [] } = req.body;
+        const { name, division, categoryId, userCoachIds } = req.body;
 
-        if (!name || !division || !categoryId || userCoachIds.length === 0) {
+        if (!name || !division || !categoryId) {
             await t.rollback();
             return res.status(400).json({
                 status: 'error',
-                message: 'Le nom, la division, la catégorie et le coach sont requis pour créer une équipe.',
+                message: 'Le nom, la division et la catégorie sont requis pour créer une équipe.',
             });
         }
 
@@ -25,30 +25,33 @@ const createTeam = async (req: Request, res: Response) => {
             });
         }
 
-        const coaches = await models.Users.findAll({
-            where: { id: userCoachIds } as any,
-            include: [
-                { model: models.UserRolesCategories, where: { roleId: 2, categoryId: categoryId } as any },
-            ],
-            transaction: t
-        });
-
-        if (coaches.length !== userCoachIds.length) {
-            await t.rollback();
-            return res.status(404).json({
-                status: 'error',
-                message: 'Au moins un coach n’a pas été trouvé.',
+        let coaches: any[] = [];
+        if (Array.isArray(userCoachIds) && userCoachIds.length > 0) {
+            coaches = await models.Users.findAll({
+                where: { id: userCoachIds } as any,
+                include: [
+                    { model: models.UserRolesCategories, where: { roleId: 2, categoryId: categoryId } as any },
+                ],
+                transaction: t
             });
+
+            if (coaches.length !== userCoachIds.length) {
+                await t.rollback();
+                return res.status(404).json({
+                    status: 'error',
+                    message: 'Au moins un coach n’a pas été trouvé.',
+                });
+            }
         }
 
         const team = await models.Teams.create({ name, division, categoryId }, { transaction: t });
 
         // @ts-ignore
-        if ((team as any).addUsers) {
+        if ((team as any).addUsers && coaches.length > 0) {
             await (team as any).addUsers(coaches, { transaction: t });
         }
-        await redis.del('teams:{}{}');
         await t.commit();
+        await redis.del('teams:{}{}');
         return res.status(201).json({
             status: 'success',
             message: 'Équipe créée avec succès.',
@@ -78,9 +81,9 @@ const updateTeam = async (req: Request, res: Response) => {
     const t = await models.sequelize.transaction();
     try {
         const id = req.params.id;
-        const { name, division, categoryId, userCoachIds = [] } = req.body;
+        const { name, division, categoryId, userCoachIds } = req.body;
 
-        const team = await models.Teams.findByPk(id as any);
+        const team = await models.Teams.findByPk(id as any, { transaction: t });
         if (!team) {
             await t.rollback();
             return res.status(404).json({
@@ -89,55 +92,73 @@ const updateTeam = async (req: Request, res: Response) => {
             });
         }
 
-        let teamCategoryId = categoryId;
-        if (name !== undefined) team.name = name;
-        if (division !== undefined) team.division = division;
-        if (teamCategoryId !== undefined) {
-            const category = await models.Categories.findByPk(teamCategoryId as any);
+        let teamCategoryId = team.categoryId;
+        const isCategoryChanging = categoryId !== undefined && categoryId !== team.categoryId;
+
+        if (isCategoryChanging) {
+            const category = await models.Categories.findByPk(categoryId as any);
             if (!category) {
                 await t.rollback();
-                return res.status(404).json({
-                    status: 'error',
-                    message: 'Catégorie non trouvée.',
-                });
+                return res.status(404).json({ status: 'error', message: 'Catégorie non trouvée.' });
             }
             team.categoryId = categoryId;
-        } else {
-            teamCategoryId = team.categoryId;
+            teamCategoryId = categoryId;
         }
 
-        let coaches: any[] = [];
-        if (userCoachIds.length > 0) {
-            coaches = await models.Users.findAll({
-                where: { id: userCoachIds } as any,
-                include: [
-                    { model: models.UserRolesCategories, where: { roleId: 2, categoryId: teamCategoryId } as any },
-                ],
-                transaction: t
-            });
+        if (name !== undefined) team.name = name;
+        if (division !== undefined) team.division = division;
 
-            if (coaches.length !== userCoachIds.length) {
-                await t.rollback();
-                return res.status(404).json({
-                    status: 'error',
-                    message: 'Au moins un coach n’a pas été trouvé.',
+        let finalCoaches: any[] = [];
+        if (Array.isArray(userCoachIds)) {
+            if (userCoachIds.length > 0) {
+                finalCoaches = await models.Users.findAll({
+                    where: { id: userCoachIds },
+                    include: [{
+                        model: models.UserRolesCategories,
+                        where: { roleId: 2, categoryId: teamCategoryId }
+                    }],
+                    transaction: t
+                });
+
+                if (finalCoaches.length !== userCoachIds.length) {
+                    await t.rollback();
+                    return res.status(404).json({
+                        status: 'error',
+                        message: 'Certains coachs sont introuvables ou non habilités pour cette catégorie.'
+                    });
+                }
+            }
+            await (team as any).setUsers(finalCoaches, { transaction: t });
+
+        } else if (isCategoryChanging) {
+            const currentCoaches = await (team as any).getUsers({ transaction: t });
+            
+            let validCoaches: any[] = [];
+
+            if (currentCoaches.length > 0) {
+                validCoaches = await models.Users.findAll({
+                    where: { id: currentCoaches.map((c: any) => c.id) },
+                    include: [{
+                        model: models.UserRolesCategories,
+                        where: { roleId: 2, categoryId: teamCategoryId }
+                    }],
+                    transaction: t
                 });
             }
-            // @ts-ignore
-            if ((team as any).setUsers) {
-                await (team as any).setUsers(coaches, { transaction: t });
-            }
+
+            await (team as any).setUsers(validCoaches, { transaction: t });
+            finalCoaches = validCoaches;
         }
 
         await team.save({ transaction: t });
-        await redis.del('teams:{}{}');
         await t.commit();
+        await redis.del('teams:{}{}');
         return res.status(200).json({
             status: 'success',
             message: 'Équipe mise à jour avec succès.',
             data: {
                 team: team,
-                coaches: coaches.map(coach => ({
+                coaches: finalCoaches.map(coach => ({
                     id: coach.id,
                     firstName: coach.firstName,
                     lastName: coach.lastName,
