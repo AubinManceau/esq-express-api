@@ -78,7 +78,7 @@ export const getAdminToken = async () => {
   };
 };
 
-export const getPlayerToken = async () => {
+export const getPlayerToken = async ({ categoryId = 1 }: { categoryId?: number } = {}) => {
   const admin = await models.Users.findOne({
     include: [{
       model: models.UserRolesCategories,
@@ -119,7 +119,7 @@ export const getPlayerToken = async () => {
       firstName: 'Test',
       lastName: 'User',
       email: userEmail,
-      rolesCategories: [{ roleId: 1, categoryId: 1 }]
+      rolesCategories: [{ roleId: 1, categoryId: categoryId }]
     });
 
   if (signupRes.status !== 201) {
@@ -153,7 +153,7 @@ export const getPlayerToken = async () => {
   };
 };
 
-export const getCoachToken = async () => {
+export const getCoachToken = async ({ categoryId = 1 }: { categoryId?: number } = {}) => {
   const admin = await models.Users.findOne({
     include: [{
       model: models.UserRolesCategories,
@@ -194,7 +194,7 @@ export const getCoachToken = async () => {
       firstName: 'Test',
       lastName: 'User',
       email: userEmail,
-      rolesCategories: [{ roleId: 2, categoryId: 1 }]
+      rolesCategories: [{ roleId: 2, categoryId: categoryId }]
     });
 
   if (signupRes.status !== 201) {

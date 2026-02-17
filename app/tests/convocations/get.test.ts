@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import request from 'supertest';
 import { app } from '../../app.js';
 import { getCoachToken, getMemberToken } from '../utils/auth.helper.js';
@@ -7,7 +7,7 @@ import models from '../../models/index.js';
 describe('Teams API', () => {
   let authHeaders: { Cookie: string };
 
-  beforeEach(async () => {
+  beforeAll(async () => {
     const auth = await getMemberToken();
     authHeaders = auth.headers;
   });

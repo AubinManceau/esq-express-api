@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import request from 'supertest';
 import { app } from '../../app.js';
 import { getCoachToken, getPlayerToken } from '../utils/auth.helper.js';

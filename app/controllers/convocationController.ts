@@ -23,6 +23,20 @@ const createConvocation = async (req: Request, res: Response) => {
                 status: 'error',
                 message: 'Équipe non trouvée.',
             });
+        } else {
+            const coachInTeam = await models.UsersCoachTeam.findOne({
+                where: {
+                    teamId: teamId,
+                    userCoachId: (req.auth as any).userId
+                }
+            });
+            if (!coachInTeam) {
+                await t.rollback();
+                return res.status(403).json({
+                    status: 'error',
+                    message: 'Vous n’avez pas la permission de créer une convocation pour cette équipe.',
+                });
+            }
         }
 
         const players = await models.Users.findAll({
@@ -82,6 +96,31 @@ const updateConvocation = async (req: Request, res: Response) => {
     try {
         const id = req.params.id;
         const { matchDate, matchHour, convocationHour, location, teamId, userPlayerIds = [] } = req.body;
+
+        if (teamId) {
+            const team = await models.Teams.findByPk(teamId as any);
+            if (!team) {
+                await t.rollback();
+                return res.status(404).json({
+                    status: 'error',
+                    message: 'Équipe non trouvée.',
+                });
+            } else {
+                const coachInTeam = await models.UsersCoachTeam.findOne({
+                    where: {
+                        teamId: teamId,
+                        userCoachId: (req.auth as any).userId
+                    }
+                });
+                if (!coachInTeam) {
+                    await t.rollback();
+                    return res.status(403).json({
+                        status: 'error',
+                        message: 'Vous n’avez pas la permission de modifier une convocation pour cette équipe.',
+                    });
+                }
+            }
+        }
 
         const convocation = await models.Convocations.findByPk(id as any);
         if (!convocation) {
