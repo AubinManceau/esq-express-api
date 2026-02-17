@@ -8,11 +8,11 @@ const createArticle = async (req: Request, res: Response) => {
         const userAuthorId = (req.auth as any).userId;
         const { title, content, status } = req.body;
 
-        if (!title || !content || !status) {
+        if (!userAuthorId) {
             await t.rollback();
             return res.status(400).json({
                 status: 'error',
-                message: 'Champs manquants !'
+                message: 'ID de l\'auteur manquant !'
             });
         }
 
@@ -143,7 +143,7 @@ const getOneArticle = async (req: Request, res: Response) => {
         res.status(200).json({
             status: 'success',
             message: 'Article récupéré avec succès !',
-            data: article
+            data: { article }
         });
 
     } catch (error) {

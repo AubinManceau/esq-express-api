@@ -164,11 +164,11 @@ describe('Teams API', () => {
     expect(coach).toHaveProperty('lastName');
   });
 
-  it('ne devrait pas afficher un training inexistant', async () => {
-    const trainingId = 9999;
+  it('ne devrait pas afficher une team inexistante', async () => {
+    const teamId = 9999;
 
     const res = await request(app)
-      .get(`/api/v1/teams/${trainingId}`)
+      .get(`/api/v1/teams/${teamId}`)
       .set(authHeaders)
 
     if (res.status !== 404) {
@@ -179,7 +179,7 @@ describe('Teams API', () => {
     expect(res.body.status).toBe('error');
   });
 
-  it('ne devrait pas afficher le training avec un utilisateur non authentifié', async () => {
+  it('ne devrait pas afficher une team avec un utilisateur non authentifié', async () => {
     const { team } = await createTestTeam();
 
     const res = await request(app)
