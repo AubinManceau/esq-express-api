@@ -87,7 +87,7 @@ const createGroupChat = async (req: Request, res: Response) => {
             
             const userRoom = io.sockets.adapter.rooms.get(`user_${userId}`);
             if (userRoom) {
-                userRoom.forEach(socketId => {
+                userRoom.forEach((socketId: string) => {
                     const socket = io.sockets.sockets.get(socketId);
                     if (socket) socket.join(`group_${groupChat.id}`);
                 });
@@ -187,7 +187,7 @@ const updateGroupChat = async (req: Request, res: Response) => {
             
             const userRoom = io.sockets.adapter.rooms.get(`user_${userId}`);
             if (userRoom) {
-                userRoom.forEach(socketId => {
+                userRoom.forEach((socketId: string) => {
                     const socket = io.sockets.sockets.get(socketId);
                     if (socket) socket.join(`group_${groupChat.id}`);
                 });
