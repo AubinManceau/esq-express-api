@@ -4,7 +4,7 @@ import auth from '../middlewares/auth.js';
 import role from '../middlewares/role.js';
 import cacheMiddleware from '../middlewares/cache.js';
 import { validateData } from '../middlewares/validation.js';
-import { createConvocationSchema, updateConvocationSchema } from '../schemas/convocation.schema.js';
+import { createConvocationSchema, updateConvocationSchema, getConvocationsQuerySchema } from '../schemas/convocation.schema.js';
 
 const router = express.Router();
 
@@ -12,6 +12,6 @@ router.post('/create', auth, role([2, 4]), validateData(createConvocationSchema)
 router.patch('/:id', auth, role([2, 4]), validateData(updateConvocationSchema), convocationCtrl.updateConvocation);
 router.delete('/:id', auth, role([2, 4]), convocationCtrl.deleteConvocation);
 router.get('/:id', auth, convocationCtrl.getOneConvocation);
-router.get('/', auth, cacheMiddleware('convocations:', 120), role([4]), convocationCtrl.getAllConvocations);
+router.get('/', auth, cacheMiddleware('convocations:', 120), role([2, 4]), validateData(getConvocationsQuerySchema, 'query'), convocationCtrl.getAllConvocations);
 
 export default router;

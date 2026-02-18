@@ -1,4 +1,4 @@
-import { Sequelize, DataTypes, Model, InferAttributes, InferCreationAttributes, CreationOptional } from 'sequelize';
+import { Sequelize, DataTypes, Model, InferAttributes, InferCreationAttributes, CreationOptional, Transaction } from 'sequelize';
 
 export interface ConvocationModel extends Model<InferAttributes<ConvocationModel>, InferCreationAttributes<ConvocationModel>> {
     id: CreationOptional<number>;

@@ -5,7 +5,7 @@ import { getCoachToken, getPlayerToken, getMemberToken } from '../utils/auth.hel
 import redis from '../../config/redisClient.js'
 import models from '../../models/index.js';
 
-describe('Teams API', () => {
+describe('Convocations API', () => {
   let authHeaders: { Cookie: string };
   let coach: { user: any };
 
@@ -90,19 +90,39 @@ describe('Teams API', () => {
     expect(redis.del).toHaveBeenCalledWith('convocations:{}{}');
   });
 
-  it('devrait modifier une convocation, lier la team et purger le cache', async () => {
-    const { team } = await createTestTeam();
-    const { convocation } = await createTestConvocation(team.id);
-    
-
-    expect(redis.del).toHaveBeenCalledWith('teams:{}{}');
-  });
-
   it('devrait modifier une convocation, lier les joueurs et purger le cache', async () => {
     const { team } = await createTestTeam();
-    const { convocation } = await createTestConvocation(team.id);
+    const { convocation, player } = await createTestConvocation(team.id);
 
-    expect(redis.del).toHaveBeenCalledWith('teams:{}{}');
+    const newPlayer1 = await getPlayerToken();
+    const newPlayer2 = await getPlayerToken();
+
+    const res = await request(app)
+      .patch(`/api/v1/convocations/${convocation.id}`)
+      .set(authHeaders)
+      .send({
+        userPlayerIds: [player.user.id, newPlayer1.user.id, newPlayer2.user.id]
+      });
+
+    expect(res.status).toBe(200);
+    const convocationId = res.body.data.convocation.id;
+    expect(convocationId).toBe(convocation.id);
+
+    const updated = await models.Convocations.findByPk(convocationId);
+    expect(updated).not.toBeNull();
+    expect(updated?.matchDate).toBe(convocation.matchDate);
+    expect(updated?.matchHour).toBe(convocation.matchHour);
+    expect(updated?.convocationHour).toBe(convocation.convocationHour);
+    expect(updated?.location).toBe(convocation.location);
+
+    const playerConvocations = await models.UsersConvocation.findAll({
+      where: {
+        convocationId: convocationId,
+      } as any,
+    });
+    expect(playerConvocations.length).toBe(3);
+
+    expect(redis.del).toHaveBeenCalledWith('convocations:{}{}');
   });
 
   it('ne devrait pas modifié une convocation avec un utilisateur non authentifié', async () => {
@@ -146,25 +166,107 @@ describe('Teams API', () => {
     const {team} = await createTestTeam();
     const {convocation} = await createTestConvocation(team.id);
 
-    
+    const nonCoachTeamAuth = await getCoachToken({categoryId: 2});
+
+    const res = await request(app)
+      .patch(`/api/v1/convocations/${convocation.id}`)
+      .set(nonCoachTeamAuth.headers)
+      .send({matchDate: '2024-07-04'});
+
+    if (res.status !== 403) {
+      console.error('Response body:', res.body);
+    }
+    expect(res.status).toBe(403);
+    const convocationInDb = await models.Convocations.findByPk(convocation.id);
+    expect(convocationInDb?.matchDate).not.toBe('2024-07-04');
+    expect(convocationInDb?.matchDate).toBe(convocation.matchDate);
   });
 
   it('ne devrait pas modifier une convocation avec un body invalide', async () => {
     const {team} = await createTestTeam();
     const {convocation} = await createTestConvocation(team.id);
+
+    const res = await request(app)
+      .patch(`/api/v1/convocations/${convocation.id}`)
+      .set(authHeaders)
+      .send({matchDate: '2024-07-04', matchHour: '15:00', convocationHour: '14:00', location: ''});
+
+    if (res.status !== 400) {
+      console.error('Response body:', res.body);
+    }
+    expect(res.status).toBe(400);
+    const convocationInDb = await models.Convocations.findByPk(convocation.id);
+    expect(convocationInDb?.matchDate).toBe(convocation.matchDate);
+    expect(convocationInDb?.matchHour).toBe(convocation.matchHour);
+    expect(convocationInDb?.convocationHour).toBe(convocation.convocationHour);
+    expect(convocationInDb?.location).toBe(convocation.location);
+  });
+
+  it('ne devrait pas modifier la team d\'une convocation', async () => {
+    const {team} = await createTestTeam();
+    const {convocation} = await createTestConvocation(team.id);
+
+    const res = await request(app)
+      .patch(`/api/v1/convocations/${convocation.id}`)
+      .set(authHeaders)
+      .send({teamId: 2});
+
+    if (res.status !== 400) {
+      console.error('Response body:', res.body);
+    }
+    expect(res.status).toBe(400);
+    const convocationInDb = await models.Convocations.findByPk(convocation.id);
+    expect(convocationInDb?.teamId).toBe(convocation.teamId);
+  });
+
+  it('ne devrait pas modifier une convocation avec des joueurs inexistants', async () => {
+    const {team} = await createTestTeam();
+    const {convocation} = await createTestConvocation(team.id);
+
+    const res = await request(app)
+      .patch(`/api/v1/convocations/${convocation.id}`)
+      .set(authHeaders)
+      .send({userPlayerIds: [9999]});
+
+    if (res.status !== 404) {
+      console.error('Response body:', res.body);
+    }
+    expect(res.status).toBe(404);
+    const convocationInDb = await models.Convocations.findByPk(convocation.id);
+    expect(convocationInDb).not.toBeNull();
     
+    const playerConvocations = await models.UsersConvocation.findAll({
+      where: {
+        convocationId: convocation.id,
+      } as any,
+    });
+    expect(playerConvocations.length).toBe(1);
   });
 
-  it('ne devrait pas modifier une convocation avec une team inexistante', async () => {
+  it('ne devrait pas modifier une convocation avec des joueurs non associés à la team', async () => {
     const {team} = await createTestTeam();
     const {convocation} = await createTestConvocation(team.id);
 
-  });
+    const nonTeamPlayer = await getPlayerToken({categoryId: 2});
 
-  it('ne devrait pas modifier une convocation avec une des joueurs inexistants', async () => {
-    const {team} = await createTestTeam();
-    const {convocation} = await createTestConvocation(team.id);
+    const res = await request(app)
+      .patch(`/api/v1/convocations/${convocation.id}`)
+      .set(authHeaders)
+      .send({userPlayerIds: [nonTeamPlayer.user.id]});
 
+    if (res.status !== 404) {
+      console.error('Response body:', res.body);
+    }
+    expect(res.status).toBe(404);
+    const convocationInDb = await models.Convocations.findByPk(convocation.id);
+    expect(convocationInDb).not.toBeNull();
+    
+    const playerConvocations = await models.UsersConvocation.findAll({
+      where: {
+        convocationId: convocation.id,
+      } as any,
+    });
+    expect(playerConvocations.length).toBe(1);
   });
 
   it('ne devrait pas modifier une convocation inexistante', async () => {

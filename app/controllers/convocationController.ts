@@ -95,32 +95,7 @@ const updateConvocation = async (req: Request, res: Response) => {
     const t = await models.sequelize.transaction();
     try {
         const id = req.params.id;
-        const { matchDate, matchHour, convocationHour, location, teamId, userPlayerIds = [] } = req.body;
-
-        if (teamId) {
-            const team = await models.Teams.findByPk(teamId as any);
-            if (!team) {
-                await t.rollback();
-                return res.status(404).json({
-                    status: 'error',
-                    message: 'Équipe non trouvée.',
-                });
-            } else {
-                const coachInTeam = await models.UsersCoachTeam.findOne({
-                    where: {
-                        teamId: teamId,
-                        userCoachId: (req.auth as any).userId
-                    }
-                });
-                if (!coachInTeam) {
-                    await t.rollback();
-                    return res.status(403).json({
-                        status: 'error',
-                        message: 'Vous n’avez pas la permission de modifier une convocation pour cette équipe.',
-                    });
-                }
-            }
-        }
+        const { matchDate, matchHour, convocationHour, location, userPlayerIds = [] } = req.body; // teamId retiré
 
         const convocation = await models.Convocations.findByPk(id as any);
         if (!convocation) {
@@ -131,25 +106,26 @@ const updateConvocation = async (req: Request, res: Response) => {
             });
         }
 
+        const coachInTeam = await models.UsersCoachTeam.findOne({
+            where: {
+                teamId: convocation.teamId,
+                userCoachId: (req.auth as any).userId
+            }
+        });
+        if (!coachInTeam) {
+            await t.rollback();
+            return res.status(403).json({
+                status: 'error',
+                message: 'Vous n\'avez pas la permission de modifier cette convocation.',
+            });
+        }
+
         if (matchDate !== undefined) convocation.matchDate = matchDate;
         if (matchHour !== undefined) convocation.matchHour = matchHour;
         if (convocationHour !== undefined) convocation.convocationHour = convocationHour;
         if (location !== undefined) convocation.location = location;
-        let team = null;
-        if (teamId !== undefined) {
-            team = await models.Teams.findByPk(teamId as any);
-            if (!team) {
-                await t.rollback();
-                return res.status(404).json({
-                    status: 'error',
-                    message: 'Équipe non trouvée.',
-                });
-            }
-            convocation.teamId = teamId;
-        } else {
-            team = await models.Teams.findByPk(convocation.teamId);
-        }
 
+        const team = await models.Teams.findByPk(convocation.teamId);
         // @ts-ignore
         const teamCategoryId = team?.categoryId;
 
@@ -167,13 +143,15 @@ const updateConvocation = async (req: Request, res: Response) => {
                 await t.rollback();
                 return res.status(404).json({
                     status: 'error',
-                    message: 'Au moins un joueur n’a pas été trouvé.',
+                    message: 'Au moins un joueur n\'a pas été trouvé.',
                 });
             }
-            // @ts-ignore
+
             if ((convocation as any).setUsers) {
                 await (convocation as any).setUsers(players, { transaction: t });
             }
+        } else {
+            players = await (convocation as any).getUsers({ transaction: t });
         }
 
         await convocation.save({ transaction: t });
@@ -227,7 +205,7 @@ const deleteConvocation = async (req: Request, res: Response) => {
 
 const getAllConvocations = async (req: Request, res: Response) => {
     try {
-        let { _category } = req.query as { _category?: any };
+        let { _category, _date } = req.query as { _category?: any, _date?: string };
 
         if (_category && !Array.isArray(_category)) {
             _category = [_category];
@@ -238,23 +216,47 @@ const getAllConvocations = async (req: Request, res: Response) => {
             whereCategory.id = { [Op.in]: _category };
         }
 
-        const convocations = await models.Convocations.findAll({
+        const whereConvocation: any = {};
+        if (_date) {
+            whereConvocation.matchDate = { [Op.gte]: new Date(_date) };
+        }
+
+        const latestIds = await models.Convocations.findAll({
+            attributes: [
+                [models.sequelize.fn('MAX', models.sequelize.col('Convocations.id')), 'maxId']
+            ],
+            where: Object.keys(whereConvocation).length ? whereConvocation : undefined,
             include: [
                 {
                     model: models.Teams,
-                    attributes: ['id', 'name'],
+                    attributes: [],
                     where: Object.keys(whereCategory).length ? whereCategory : undefined
-                },
-                { model: models.Users, attributes: ['id', 'firstName', 'lastName'], through: { attributes: [] } }
-            ]
+                }
+            ],
+            group: ['Convocations.teamId'],
+            raw: true
         });
 
-        if (convocations.length === 0) {
+        const ids = latestIds.map((row: any) => row.maxId);
+
+        if (ids.length === 0) {
             return res.status(404).json({
                 status: 'error',
                 message: 'Aucune convocation trouvée.',
             });
         }
+
+        const convocations = await models.Convocations.findAll({
+            where: { id: { [Op.in]: ids } },
+            include: [
+                {
+                    model: models.Teams,
+                    attributes: ['id', 'name'],
+                },
+                { model: models.Users, attributes: ['id', 'firstName', 'lastName'], through: { attributes: [] } }
+            ],
+            order: [['matchDate', 'DESC']]
+        });
 
         return res.status(200).json({
             status: 'success',
