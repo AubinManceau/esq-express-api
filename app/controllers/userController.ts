@@ -329,15 +329,8 @@ const deleteUser = async (req: Request, res: Response) => {
     try {
         const userId = req.params.userId;
 
-        if (!userId) {
-            return res.status(400).json({
-                status: 'error',
-                message: "L'identifiant de l'utilisateur est requis."
-            });
-        }
-
         if (Number(userId) === Number((req.auth as any).userId)) {
-            return res.status(400).json({
+            return res.status(403).json({
                 status: 'error',
                 message: "Un utilisateur ne peut pas supprimer son propre compte."
             });
