@@ -19,6 +19,12 @@ export default async (req: Request, res: Response, next: NextFunction) => {
 
         try {
             const decoded = jwt.verify(accessToken, process.env.SECRET_KEY_ACCESS_TOKEN as string) as AuthPayload;
+
+            const user = await models.Users.findByPk(decoded.userId, { attributes: ['isActive'] });
+            if (!user || !user.isActive) {
+                return res.status(401).json({ status: 'error', message: 'Compte inactif ou supprimé.' });
+            }
+
             req.auth = decoded;
             return next();
         } catch (err: any) {
@@ -27,8 +33,8 @@ export default async (req: Request, res: Response, next: NextFunction) => {
                     const decodedRefresh = jwt.verify(refreshToken, process.env.SECRET_KEY_REFRESH_TOKEN as string) as AuthPayload;
 
                     const user = await models.Users.findByPk(decodedRefresh.userId);
-                    if (!user || user.refreshToken !== refreshToken) {
-                        return res.status(401).json({ status: 'error', message: 'Refresh token invalide.' });
+                    if (!user || user.refreshToken !== refreshToken || !user.isActive) {
+                        return res.status(401).json({ status: 'error', message: 'Accès refusé ou session invalide.' });
                     }
 
                     const roles = await models.UserRolesCategories.findAll({
