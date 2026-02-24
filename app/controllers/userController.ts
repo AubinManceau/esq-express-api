@@ -331,6 +331,62 @@ const getUsers = async (req: Request, res: Response) => {
     }
 };
 
+const getProfile = async (req: Request, res: Response) => {
+    try {
+        const userId = (req.auth as any).userId;
+
+        const user = await models.Users.findByPk(userId as any, {
+            include: [
+                {
+                    model: models.UserRolesCategories,
+                    include: [
+                        { model: models.Roles },
+                        { model: models.Categories }
+                    ]
+                }
+            ]
+        });
+        if (!user || !user.isActive) {
+            return res.status(404).json({
+                status: 'error',
+                message: 'Utilisateur non trouvé ou inactif.'
+            });
+        }
+
+        // @ts-ignore
+        const rolesCategories = (user as any).UserRolesCategories || [];
+        const host = `${req.protocol}://${req.get('host')}`;
+
+        const userData = {
+            id: user.id,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            email: user.email,
+            phone: user.phone,
+            photoUrl: user.photo ? `${host}${user.photo}` : null,
+            photoCelebrationUrl: user.photo_celebration ? `${host}${user.photo_celebration}` : null,
+            roles: rolesCategories.map((urc: any) => ({
+                roleId: urc.roleId,
+                roleName: urc.Role ? urc.Role.name : null,
+                categoryId: urc.categoryId,
+                categoryName: urc.Category ? urc.Category.name : null
+            }))
+        };
+
+        return res.status(200).json({
+            status: 'success',
+            message: 'Profil utilisateur récupéré avec succès.',
+            data: { user: userData }
+        });
+
+    } catch (error) {
+        return res.status(500).json({
+            status: 'error',
+            message: 'Erreur interne du serveur lors de la récupération du profil utilisateur.'
+        });
+    }
+};
+
 const deleteUser = async (req: Request, res: Response) => {
     try {
         const userId = req.params.userId;
@@ -392,5 +448,6 @@ export default {
     getFiles,
     getUser,
     getUsers,
-    deleteUser
+    deleteUser,
+    getProfile
 };

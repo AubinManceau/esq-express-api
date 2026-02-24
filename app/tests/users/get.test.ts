@@ -46,4 +46,16 @@ describe('Users API', () => {
   it('ne devrait pas afficher un utilisateur spécifique qui n\'existe pas', async () => {
 
   });
+
+  it('devrait afficher ses informations de profil', async () => {
+
+  });
+
+  it('ne devrait pas afficher ses informations de profil avec un utilisateur non authentifié', async () => {
+
+  });
+
+  it('ne devrait pas afficher ses informations de profil avec un utilisateur non trouvé', async () => {
+
+  });
 });

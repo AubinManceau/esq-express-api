@@ -16,5 +16,6 @@ router.delete('/:userId', auth, role([4]), validateData(deleteUserSchema, 'param
 router.get('/:userId', auth, userCtrl.getUser);
 router.get('/', auth, cacheMiddleware('users:', 120), userCtrl.getUsers);
 router.get('/uploads/:filename', auth, role([3, 4]), userCtrl.getFiles);
+router.get('/profile', auth, userCtrl.getProfile);
 
 export default router;
