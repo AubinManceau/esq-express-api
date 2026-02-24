@@ -1,9 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import request from 'supertest';
 import { app } from '../../app.js';
-import { getCoachToken, getAdminToken, getPlayerToken } from '../utils/auth.helper.js';
-import redis from '../../config/redisClient.js'
-import models from '../../models/index.js';
+import { getAdminToken, getPlayerToken } from '../utils/auth.helper.js';
 
 describe('Users API', () => {
   let authHeaders: { Cookie: string };

@@ -179,20 +179,6 @@ const updatePassword = async (req: Request, res: Response) => {
         const userId = (req.auth as any).userId;
         const { oldPassword, newPassword, confirmPassword } = req.body;
 
-        if (!oldPassword || !newPassword || !confirmPassword) {
-            return res.status(400).json({
-                status: 'error',
-                message: "Tous les champs sont requis."
-            });
-        }
-
-        if (newPassword !== confirmPassword) {
-            return res.status(400).json({
-                status: 'error',
-                message: "Le nouveau mot de passe et la confirmation ne correspondent pas."
-            });
-        }
-
         const user = await models.Users.findByPk(userId as any);
         if (!user || !user.isActive) {
             return res.status(404).json({
@@ -201,10 +187,17 @@ const updatePassword = async (req: Request, res: Response) => {
             });
         }
 
-        if (!user.password) {
+        if (!user.password || !user.isActive) {
             return res.status(400).json({
                 status: 'error',
-                message: "L'utilisateur n'a pas de mot de passe défini."
+                message: "Le compte de cet utilisateur n'a pas de mot de passe défini ou est inactif."
+            });
+        }
+
+        if (newPassword !== confirmPassword) {
+            return res.status(400).json({
+                status: 'error',
+                message: "Le nouveau mot de passe et la confirmation ne correspondent pas."
             });
         }
 
