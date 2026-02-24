@@ -260,11 +260,17 @@ const getUser = async (req: Request, res: Response) => {
             });
         }
 
+        const host = `${req.protocol}://${req.get('host')}`;
+
         res.status(200).json({
             status: 'success',
             message: "Utilisateur récupéré avec succès.",
             data: {
-                user: user
+                user: {
+                    ...user.toJSON(),
+                    photoUrl: user.photo ? `${host}${user.photo}` : null,
+                    photoCelebrationUrl: user.photo_celebration ? `${host}${user.photo_celebration}` : null
+                }
             }
         });
 
@@ -360,10 +366,11 @@ const deleteUser = async (req: Request, res: Response) => {
             message: "Utilisateur supprimé avec succès."
         });
 
-    } catch (error) {
+    } catch (error: any) {
+        console.error('Error deleting user:', error);
         res.status(500).json({
             status: 'error',
-            message: "Erreur interne du serveur lors de la suppression de l'utilisateur."
+            message: error.message || "Erreur interne du serveur lors de la suppression de l'utilisateur."
         });
     }
 };

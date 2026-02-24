@@ -41,8 +41,8 @@ export default function initModels(sequelize: Sequelize) {
     Trainings.belongsTo(Categories, { foreignKey: 'categoryId' });
     Categories.hasMany(Trainings, { foreignKey: 'categoryId' });
 
-    UserRolesCategories.belongsTo(Users, { foreignKey: 'userId' });
-    Users.hasMany(UserRolesCategories, { foreignKey: 'userId' });
+    UserRolesCategories.belongsTo(Users, { foreignKey: 'userId', onDelete: 'CASCADE' });
+    Users.hasMany(UserRolesCategories, { foreignKey: 'userId', onDelete: 'CASCADE', hooks: true });
 
     UserRolesCategories.belongsTo(Categories, { foreignKey: 'categoryId' });
     Categories.hasMany(UserRolesCategories, { foreignKey: 'categoryId' });
@@ -68,20 +68,20 @@ export default function initModels(sequelize: Sequelize) {
     ChatGroups.belongsTo(Roles, { foreignKey: 'roleId' });
     Roles.hasMany(ChatGroups, { foreignKey: 'roleId' });
 
-    GroupMessages.belongsTo(Users, { foreignKey: 'senderId' });
-    Users.hasMany(GroupMessages, { foreignKey: 'senderId' });
+    GroupMessages.belongsTo(Users, { foreignKey: 'senderId', onDelete: 'CASCADE' });
+    Users.hasMany(GroupMessages, { foreignKey: 'senderId', onDelete: 'CASCADE', hooks: true });
 
     GroupMessages.belongsTo(ChatGroups, { foreignKey: 'chatGroupId' });
     ChatGroups.hasMany(GroupMessages, { foreignKey: 'chatGroupId' });
 
-    Users.hasMany(PrivateMessages, { foreignKey: 'senderId' });
-    PrivateMessages.belongsTo(Users, { foreignKey: 'senderId' });
+    PrivateMessages.belongsTo(Users, { foreignKey: 'senderId', onDelete: 'CASCADE' });
+    Users.hasMany(PrivateMessages, { foreignKey: 'senderId', onDelete: 'CASCADE', hooks: true });
 
-    Users.hasMany(PrivateMessages, { foreignKey: 'receiverId' });
-    PrivateMessages.belongsTo(Users, { foreignKey: 'receiverId' });
+    PrivateMessages.belongsTo(Users, { foreignKey: 'receiverId', onDelete: 'CASCADE' });
+    Users.hasMany(PrivateMessages, { foreignKey: 'receiverId', onDelete: 'CASCADE', hooks: true });
 
-    Users.hasMany(Articles, { foreignKey: 'userAuthorId' });
-    Articles.belongsTo(Users, { foreignKey: 'userAuthorId' });
+    Articles.belongsTo(Users, { foreignKey: 'userAuthorId', onDelete: 'CASCADE' });
+    Users.hasMany(Articles, { foreignKey: 'userAuthorId', onDelete: 'CASCADE', hooks: true });
 
     return {
         sequelize,

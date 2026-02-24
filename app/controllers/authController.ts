@@ -654,6 +654,7 @@ const getProfile = async (req: Request, res: Response) => {
 
         // @ts-ignore
         const rolesCategories = (user as any).UserRolesCategories || [];
+        const host = `${req.protocol}://${req.get('host')}`;
 
         const userData = {
             id: user.id,
@@ -661,6 +662,8 @@ const getProfile = async (req: Request, res: Response) => {
             lastName: user.lastName,
             email: user.email,
             phone: user.phone,
+            photoUrl: user.photo ? `${host}${user.photo}` : null,
+            photoCelebrationUrl: user.photo_celebration ? `${host}${user.photo_celebration}` : null,
             roles: rolesCategories.map((urc: any) => ({
                 roleId: urc.roleId,
                 roleName: urc.Role ? urc.Role.name : null,
