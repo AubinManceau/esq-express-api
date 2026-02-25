@@ -4,6 +4,7 @@ import { app } from '../../app.js';
 import { getCoachToken, getAdminToken, getPlayerToken } from '../utils/auth.helper.js';
 import redis from '../../config/redisClient.js'
 import models from '../../models/index.js';
+import e from 'express';
 
 describe('Users API', () => {
   let authHeaders: { Cookie: string };
@@ -20,7 +21,7 @@ describe('Users API', () => {
 
   it('devrait modifier son compte utilisateur', async () => {
     const response = await request(app)
-      .patch('/api/users')
+      .patch('/api/v1/users')
       .set(user.headers)
       .send({
           firstName: 'NouveauPrénom',
@@ -42,7 +43,7 @@ describe('Users API', () => {
 
   it('ne devrait pas modifier un utilisateur en etant non authentifié', async () => {
     const response = await request(app)
-      .patch('/api/users')
+      .patch('/api/v1/users')
       .send({
           firstName: 'NouveauPrénom',
       });
@@ -54,7 +55,7 @@ describe('Users API', () => {
 
   it('ne devrait pas modifier un utilisateur avec des donnees invalides', async () => {
     const response = await request(app)
-      .patch('/api/users')
+      .patch('/api/v1/users')
       .set(user.headers)
       .send({
           firstName: '',
@@ -75,7 +76,7 @@ describe('Users API', () => {
 
   it('devrait modifier le mot de passe de son compte utilisateur', async () => {
       const response = await request(app)
-        .patch('/api/users/password')
+        .patch('/api/v1/users/password')
         .set(user.headers)
         .send({
             oldPassword: 'Test1234!',
@@ -97,7 +98,7 @@ describe('Users API', () => {
 
   it('ne devrait pas modifier le mot de passe de son compte utilisateur sans être authentifié', async () => {
       const response = await request(app)
-        .patch('/api/users/password')
+        .patch('/api/v1/users/password')
         .send({
             oldPassword: 'Test1234!',
             newPassword: 'newpassword123',
@@ -118,7 +119,7 @@ describe('Users API', () => {
 
   it('ne devrait pas modifier le mot de passe avec des donnees invalides', async () => {
       const response = await request(app)
-        .patch('/api/users/password')
+        .patch('/api/v1/users/password')
         .set(user.headers)
         .send({
             oldPassword: 'Test1234!',
@@ -140,7 +141,7 @@ describe('Users API', () => {
 
   it('ne devrait pas modifier le mot de passe si l\'ancien mot de passe est incorrect', async () => {
       const response = await request(app)
-        .patch('/api/users/password')
+        .patch('/api/v1/users/password')
         .set(user.headers)
         .send({
             oldPassword: 'Wrong0ldPassword!',
@@ -161,7 +162,7 @@ describe('Users API', () => {
 
   it('ne devrait pas modifier le mot de passe si le nouveau mot de passe ne correspond pas a la confirmation', async () => {
       const response = await request(app)
-        .patch('/api/users/password')
+        .patch('/api/v1/users/password')
         .set(user.headers)
         .send({
             oldPassword: 'Test1234!',
@@ -184,24 +185,29 @@ describe('Users API', () => {
 
   it('devrait modifier le compte utilisateur par un administrateur', async () => {
     const response = await request(app)
-      .patch(`/api/admin/users/${user.user.id}`) // Changement en .patch
+      .patch(`/api/v1/users/${user.user.id}`) // Changement en .patch
       .set(auth.headers)
       .send({
           firstName: 'PrénomAdminModif',
-          lastName: 'NomAdminModif'
+          lastName: 'NomAdminModif',
+          licence: 'LicenceAdminModif'
       });
 
     expect(response.status).toBe(200);
     
     const updated = await models.Users.findByPk(user.user.id);
-    expect(updated?.firstName).toBe('PrénomAdminModif');
+    expect(updated?.firstName).toBe(response.body.data.firstName);
+    expect(updated?.lastName).toBe(response.body.data.lastName);
+    expect(updated?.licence).toBe(response.body.data.licence);
+    expect(updated?.phone).toBe(user.user.phone);
+    expect(updated?.email).toBe(user.user.email);
   });
 
   it('devrait modifier les roles de l\'utilisateur par un administrateur', async () => {
-    const newRoles = [{ roleId: 1, categoryId: 2 }];
+    const newRoles = [{ roleId: 2, categoryId: 2 }];
 
     const response = await request(app)
-      .patch(`/api/admin/users/${user.user.id}`)
+      .patch(`/api/v1/users/${user.user.id}`)
       .set(auth.headers)
       .send({
           rolesCategories: newRoles
@@ -213,12 +219,13 @@ describe('Users API', () => {
         where: { userId: user.user.id }
     });
     expect(rolesInDb).toHaveLength(1);
-    expect(Number(rolesInDb[0].roleId)).toBe(1);
+    expect(Number(rolesInDb[0].roleId)).toBe(2);
+    expect(Number(rolesInDb[0].categoryId)).toBe(2);
   });
 
   it('devrait desactiver un utilisateur par un administrateur', async () => {
     const response = await request(app)
-      .patch(`/api/admin/users/${user.user.id}`)
+      .patch(`/api/v1/users/${user.user.id}`)
       .set(auth.headers)
       .send({ isActive: false });
 
@@ -226,14 +233,14 @@ describe('Users API', () => {
     const updated = await models.Users.findByPk(user.user.id);
     expect(updated?.isActive).toBe(false);
     expect(updated?.refreshToken).toBeNull();
+    expect(updated?.password).toBeNull();
   });
 
   it('devrait activer un utilisateur par un administrateur', async () => {
-    // On force l'état inactif en base avant le test
-    await models.Users.update({ isActive: false }, { where: { id: user.user.id } });
+    await models.Users.update({ isActive: false, refreshToken: null, password: null }, { where: { id: user.user.id } });
 
     const response = await request(app)
-      .patch(`/api/admin/users/${user.user.id}`)
+      .patch(`/api/v1/users/${user.user.id}`)
       .set(auth.headers)
       .send({ isActive: true });
 
@@ -243,35 +250,35 @@ describe('Users API', () => {
   });
 
   it('devrait supprimer les photos de l\'utilisateur par un administrateur', async () => {
-    await models.Users.update({ photo: 'path/to/photo.jpg' }, { where: { id: user.user.id } });
+    await models.Users.update({ photo: 'path/to/photo.jpg', photo_celebration: 'path/to/photo_celebration.jpg' }, { where: { id: user.user.id } });
 
     const response = await request(app)
-      .patch(`/api/admin/users/${user.user.id}`)
+      .patch(`/api/v1/users/${user.user.id}`)
       .set(auth.headers)
-      .send({ photo: 'DELETE' });
+      .send({ photo: 'DELETE', photo_celebration: 'DELETE' });
 
     expect(response.status).toBe(200);
     const updated = await models.Users.findByPk(user.user.id);
     expect(updated?.photo).toBeNull();
+    expect(updated?.photo_celebration).toBeNull();
   });
 
   it('devrait ajouter les photos de l\'utilisateur par un administrateur', async () => {
-    // Note : Quand on utilise .attach(), supertest passe en "multipart/form-data"
-    // Si tu as besoin d'envoyer d'autres champs en même temps, utilise .field()
     const response = await request(app)
-      .patch(`/api/admin/users/${user.user.id}`)
+      .patch(`/api/v1/users/${user.user.id}`)
       .set(auth.headers)
       .attach('photo', Buffer.from('fake-image-content'), 'test.png')
-      .field('firstName', 'TestPhoto'); 
+      .attach('photo_celebration', Buffer.from('fake-image-content'), 'test_celebration.png');
 
     expect(response.status).toBe(200);
     const updated = await models.Users.findByPk(user.user.id);
     expect(updated?.photo).toMatch(/\/uploads\/.*\.png/);
+    expect(updated?.photo_celebration).toMatch(/\/uploads\/.*\.png/);
   });
 
   it('ne devrait pas modifier le compte par un administrateur si l\'utilisateur n\'existe pas', async () => {
     const response = await request(app)
-      .patch('/api/admin/users/999999')
+      .patch('/api/v1/users/999999')
       .set(auth.headers)
       .send({ firstName: 'Inexistant' });
 
@@ -280,7 +287,7 @@ describe('Users API', () => {
 
   it('ne devrait pas modifier son propre compte admin via cette route', async () => {
     const response = await request(app)
-      .patch(`/api/admin/users/${auth.user.id}`)
+      .patch(`/api/v1/users/${auth.user.id}`)
       .set(auth.headers)
       .send({ firstName: 'TentativeSelfModif' });
 
