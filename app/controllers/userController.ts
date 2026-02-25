@@ -58,7 +58,6 @@ const updateUserForAdmin = async (req: RequestWithFiles, res: Response) => {
     }
 
     const t = await models.sequelize.transaction();
-    let filesToDelete: string[] = [];
 
     try {
         const user = await models.Users.findByPk(userId, { transaction: t });
@@ -67,34 +66,47 @@ const updateUserForAdmin = async (req: RequestWithFiles, res: Response) => {
             return res.status(404).json({ status: 'error', message: "Utilisateur non trouvé." });
         }
 
-        const { email, firstName, lastName, phone, isActive, rolesCategories, licence, photo, photo_celebration } = req.body;
+        const { email, firstName, lastName, phone, isActive, rolesCategories, licence } = req.body;
+
+        if (req.body.photo === "DELETE" && user.photo) {
+            deleteFile(user.photo);
+            user.photo = null;
+        }
+
+        if (req.body.photo_celebration === "DELETE" && user.photo_celebration) {
+            deleteFile(user.photo_celebration);
+            user.photo_celebration = null;
+        }
+
         const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
 
-        const processPhoto = (field: 'photo' | 'photo_celebration', deleteFlag: string) => {
-            if (deleteFlag === "DELETE" && user[field]) {
-                filesToDelete.push(user[field]);
-                user[field] = null;
-            }
-            if (files && files[field]) {
-                if (user[field]) filesToDelete.push(user[field]);
-                user[field] = `/uploads/${files[field][0].filename}`;
-            }
-        };
-
-        processPhoto('photo', photo);
-        processPhoto('photo_celebration', photo_celebration);
+        if (files && files.photo) {
+            if (user.photo) deleteFile(user.photo);
+            user.photo = `/uploads/${files.photo[0].filename}`;
+        }
+        if (files && files.photo_celebration) {
+            if (user.photo_celebration) deleteFile(user.photo_celebration);
+            user.photo_celebration = `/uploads/${files.photo_celebration[0].filename}`;
+        }
 
         const wasActive = user.isActive;
-        const willBeActive = isActive;
-
-        user.set({ email, firstName, lastName, phone, licence, isActive });
         
-        if (willBeActive === false) {
-            user.refreshToken = null;
-            user.password = null;
-        } 
-        else if (wasActive === false && willBeActive === true) {
-            const tempPassword = Math.random().toString(36).slice(-8) + 'A1!';
+        if (email !== undefined) user.email = email;
+        if (firstName !== undefined) user.firstName = firstName;
+        if (lastName !== undefined) user.lastName = lastName;
+        if (phone !== undefined) user.phone = phone;
+        if (licence !== undefined) user.licence = licence;
+        
+        if (isActive !== undefined) {
+            const willBeActive = isActive === 'true' || isActive === true;
+            user.isActive = willBeActive;
+
+            if (willBeActive === false) {
+                user.refreshToken = null;
+                user.password = null;
+            } else if (wasActive === false && willBeActive === true) {
+                console.warn(`User ${user.id} réactivé.`);
+            }
         }
 
         if (Array.isArray(rolesCategories)) {
@@ -130,7 +142,6 @@ const updateUserForAdmin = async (req: RequestWithFiles, res: Response) => {
 
         await user.save({ transaction: t });
         await t.commit();
-        filesToDelete.forEach(path => deleteFile(path));
         await redis.del('users:{}{}');
         return res.status(200).json({ 
             status: 'success',
@@ -138,11 +149,24 @@ const updateUserForAdmin = async (req: RequestWithFiles, res: Response) => {
             data: user 
         });
 
-    } catch (error: any) {
-        if (t) await t.rollback();
-        console.error(error);
-        res.status(500).json({ status: 'error', message: error.message || "Erreur interne." });
-    }
+        } catch (error: any) {
+            if (t) await t.rollback();
+            
+            // On construit un objet propre car JSON.stringify(new Error()) renvoie {}
+            const errorDetails = {
+                message: error.message,
+                stack: error.stack,
+                name: error.name,
+                ...(error.errors ? { sequelizeErrors: error.errors } : {}) // Pour les erreurs de validation Sequelize
+            };
+
+            console.error("❌ ERREUR SERVEUR DETECTEE :", errorDetails);
+
+            return res.status(500).json({ 
+                status: 'error', 
+                ...errorDetails
+            });
+        }
 };
 
 const updatePassword = async (req: Request, res: Response) => {

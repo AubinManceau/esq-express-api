@@ -80,17 +80,17 @@ describe('Users API', () => {
         .set(user.headers)
         .send({
             oldPassword: 'Test1234!',
-            newPassword: 'newpassword123',
-            confirmPassword: 'newpassword123'
+            newPassword: 'newPassword123!',
+            confirmPassword: 'newPassword123!'
         });
 
       expect(response.status).toBe(200);
 
       const loginResponse = await request(app)
-        .post('/api/auth/login')
+        .post('/api/v1/auth/login')
         .send({
             email: user.user.email,
-            password: 'newpassword123'
+            password: 'newPassword123!'
         });
 
       expect(loginResponse.status).toBe(200);
@@ -101,17 +101,17 @@ describe('Users API', () => {
         .patch('/api/v1/users/password')
         .send({
             oldPassword: 'Test1234!',
-            newPassword: 'newpassword123',
-            confirmPassword: 'newpassword123'
+            newPassword: 'newPassword123!',
+            confirmPassword: 'newPassword123!'
         });
 
       expect(response.status).toBe(401);
 
       const loginResponse = await request(app)
-      .post('/api/auth/login')
+      .post('/api/v1/auth/login')
       .send({
           email: user.user.email,
-          password: 'newpassword123'
+          password: 'newPassword123!'
       });
 
       expect(loginResponse.status).toBe(401);
@@ -130,7 +130,7 @@ describe('Users API', () => {
       expect(response.status).toBe(400);
       
       const loginResponse = await request(app)
-        .post('/api/auth/login')
+        .post('/api/v1/auth/login')
         .send({
             email: user.user.email,
             password: 'short'
@@ -148,10 +148,10 @@ describe('Users API', () => {
             newPassword: 'newPassword123!',
             confirmPassword: 'newPassword123!'
         });
-      expect(response.status).toBe(400);
+      expect(response.status).toBe(401);
 
       const loginResponse = await request(app)
-        .post('/api/auth/login')
+        .post('/api/v1/auth/login')
         .send({
             email: user.user.email,
             password: 'newPassword123!'
@@ -172,7 +172,7 @@ describe('Users API', () => {
       expect(response.status).toBe(400);
 
       const loginResponse = await request(app)
-        .post('/api/auth/login')
+        .post('/api/v1/auth/login')
         .send({
             email: user.user.email,
             password: 'newPassword123!'
@@ -270,6 +270,9 @@ describe('Users API', () => {
       .attach('photo', Buffer.from('fake-image-content'), 'test.png')
       .attach('photo_celebration', Buffer.from('fake-image-content'), 'test_celebration.png');
 
+      if (response.status !== 200) {
+  console.log("Corps de l'erreur reçue :", response.body);
+}
     expect(response.status).toBe(200);
     const updated = await models.Users.findByPk(user.user.id);
     expect(updated?.photo).toMatch(/\/uploads\/.*\.png/);
