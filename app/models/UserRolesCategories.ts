@@ -1,5 +1,4 @@
 import { Sequelize, DataTypes, Model, InferAttributes, InferCreationAttributes, CreationOptional } from 'sequelize';
-import { ROLES } from '../config/constants.js';
 
 export interface UserRolesCategoryModel extends Model<InferAttributes<UserRolesCategoryModel>, InferCreationAttributes<UserRolesCategoryModel>> {
     id: CreationOptional<number>;
@@ -38,7 +37,7 @@ export default (sequelize: Sequelize) => {
         ],
         hooks: {
             beforeValidate: (userRoleCategory) => {
-                if ((userRoleCategory.roleId === ROLES.PLAYER || userRoleCategory.roleId === ROLES.COACH) && !userRoleCategory.categoryId) {
+                if ((userRoleCategory.roleId === 1 || userRoleCategory.roleId === 2) && !userRoleCategory.categoryId) {
                     throw new Error('La catégorie est requise pour les rôles joueur et coach.');
                 }
             }
